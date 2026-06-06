@@ -169,7 +169,8 @@
       </div>
     </div>
 
-    <p class="text-slate-600 text-xs mt-6 text-center max-w-xs">Release to hide your role instantly. No peeking!</p>
+    <p class="text-slate-600 text-xs mt-6 text-center max-w-xs">Release to hide your role instantly. No peeking! When you're ready, tap the button below.</p>
+    <button onclick="prepareNextPlayer()" class="w-full max-w-sm h-14 rounded-2xl bg-slate-700 text-white font-bold btn-press mt-4">Next Player</button>
   </div>
 
   <!-- NEXT PLAYER SCREEN -->
@@ -1768,11 +1769,19 @@ function endHold() {
   holdPad.classList.remove('holding');
   revealContent.classList.remove('visible');
   holdPadLabel.style.opacity = '1';
-  showScreen('nextPlayerScreen');
+}
+
+function prepareNextPlayer() {
+  if (holdPad.classList.contains('holding')) {
+    holdPad.classList.remove('holding');
+    revealContent.classList.remove('visible');
+    holdPadLabel.style.opacity = '1';
+  }
   const remaining = state.players - state.currentPlayerIndex - 1;
   document.getElementById('nextPlayerInfo').textContent = remaining > 0
     ? `${remaining} player${remaining > 1 ? 's' : ''} remaining`
     : 'All players have seen their roles!';
+  showScreen('nextPlayerScreen');
 }
 
 holdPad.addEventListener('mousedown', startHold);
