@@ -1,0 +1,1858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Imposter Word Hunt</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            neon: { cyan: '#22d3ee', pink: '#f472b6', purple: '#a78bfa' }
+          },
+          animation: {
+            'pulse-glow': 'pulseGlow 2s ease-in-out infinite',
+            'fade-in': 'fadeIn 0.4s ease-out',
+            'scale-in': 'scaleIn 0.3s ease-out',
+          },
+          keyframes: {
+            pulseGlow: {
+              '0%, 100%': { boxShadow: '0 0 20px rgba(34,211,238,0.3)' },
+              '50%': { boxShadow: '0 0 40px rgba(34,211,238,0.6)' },
+            },
+            fadeIn: { from: { opacity: '0' }, to: { opacity: '1' } },
+            scaleIn: { from: { opacity: '0', transform: 'scale(0.95)' }, to: { opacity: '1', transform: 'scale(1)' } },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    body { overscroll-behavior: none; }
+    .screen { display: none; }
+    .screen.active { display: flex; }
+    .hold-pad:active, .hold-pad.holding {
+      background: linear-gradient(135deg, rgba(34,211,238,0.3), rgba(167,139,250,0.3));
+      border-color: #22d3ee;
+      transform: scale(0.98);
+    }
+    .reveal-content { filter: blur(20px); opacity: 0.3; transition: filter 0.15s, opacity 0.15s; }
+    .reveal-content.visible { filter: blur(0); opacity: 1; }
+    .category-card input:checked + label {
+      border-color: #22d3ee;
+      background: rgba(34,211,238,0.15);
+      box-shadow: 0 0 15px rgba(34,211,238,0.3);
+    }
+    .btn-press { transition: transform 0.1s, box-shadow 0.1s; }
+    .btn-press:active { transform: scale(0.96); }
+    .neon-border { border: 2px solid rgba(34,211,238,0.4); }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen overflow-x-hidden">
+
+  <!-- Global Mute Toggle -->
+  <button id="muteBtn" onclick="toggleMute()" aria-label="Toggle mute"
+    class="fixed top-4 right-4 z-50 w-12 h-12 rounded-full bg-slate-800/90 neon-border flex items-center justify-center btn-press backdrop-blur-sm">
+    <span id="muteIcon" class="text-xl">🔊</span>
+  </button>
+
+  <!-- SETUP SCREEN -->
+  <div id="setupScreen" class="screen active flex-col min-h-screen animate-fade-in">
+    <div class="w-full h-40 sm:h-52 relative overflow-hidden shrink-0">
+      <img id="bannerImg" src="" alt="Imposter Word Hunt" class="w-full h-full object-cover"
+        onerror="this.style.display='none';document.getElementById('bannerFallback').style.display='flex'">
+      <div id="bannerFallback" class="hidden w-full h-full bg-gradient-to-br from-cyan-900 via-purple-900 to-slate-900 items-center justify-center">
+        <h1 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400">IMPOSTER WORD HUNT</h1>
+      </div>
+      <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-3xl rounded-3xl bg-slate-950/80 border border-slate-700 px-4 py-5 backdrop-blur-sm shadow-2xl flex flex-col sm:flex-row items-center gap-4">
+        <div class="w-full sm:w-40 h-40 rounded-3xl overflow-hidden border border-slate-700 bg-slate-900 flex-shrink-0">
+          <img src="photos/WhatsApp Image 2026-01-17 at 5.05.02 PM.jpeg" alt="Created by" class="w-full h-full object-cover">
+        </div>
+        <div class="text-center sm:text-left text-white">
+          <p class="text-[10px] uppercase tracking-[0.35em] text-cyan-300">Created by</p>
+          <p class="mt-1 text-2xl font-bold leading-tight">Netramadi</p>
+        </div>
+      </div>
+      <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div>
+    </div>
+
+    <div class="flex-1 px-4 pb-8 pt-4 max-w-lg mx-auto w-full space-y-5 overflow-y-auto scrollbar-hide">
+      <h2 class="text-center text-lg font-bold text-cyan-400 tracking-wider">GAME SETUP</h2>
+
+      <!-- Players -->
+      <div class="bg-slate-800/60 rounded-2xl p-4 neon-border">
+        <label class="text-sm text-slate-400 font-medium">Number of Players</label>
+        <div class="flex items-center gap-3 mt-2">
+          <button onclick="adjustPlayers(-1)" class="w-14 h-14 rounded-xl bg-slate-700 text-2xl font-bold btn-press hover:bg-slate-600">−</button>
+          <input id="playerCount" type="number" min="3" value="4"
+            class="flex-1 h-14 text-center text-2xl font-bold bg-slate-900 rounded-xl border border-slate-600 focus:border-cyan-400 focus:outline-none"
+            onchange="validateSetup()" oninput="validateSetup()">
+          <button onclick="adjustPlayers(1)" class="w-14 h-14 rounded-xl bg-slate-700 text-2xl font-bold btn-press hover:bg-slate-600">+</button>
+        </div>
+      </div>
+
+      <!-- Imposters -->
+      <div class="bg-slate-800/60 rounded-2xl p-4 neon-border">
+        <label class="text-sm text-slate-400 font-medium">Number of Imposters</label>
+        <div class="flex items-center gap-3 mt-2">
+          <button onclick="adjustImposters(-1)" class="w-14 h-14 rounded-xl bg-red-900/50 text-2xl font-bold btn-press hover:bg-red-800/50">−</button>
+          <input id="imposterCount" type="number" min="1" value="1"
+            class="flex-1 h-14 text-center text-2xl font-bold bg-slate-900 rounded-xl border border-red-800/50 focus:border-red-400 focus:outline-none"
+            onchange="validateSetup()" oninput="validateSetup()">
+          <button onclick="adjustImposters(1)" class="w-14 h-14 rounded-xl bg-red-900/50 text-2xl font-bold btn-press hover:bg-red-800/50">+</button>
+        </div>
+        <p id="imposterWarning" class="text-red-400 text-xs mt-2 hidden">Imposters must be less than total players</p>
+      </div>
+
+      <!-- Timer -->
+      <div class="bg-slate-800/60 rounded-2xl p-4 neon-border">
+        <label class="text-sm text-slate-400 font-medium">Discussion Timer (minutes)</label>
+        <div class="flex items-center gap-3 mt-2">
+          <button onclick="adjustTimer(-1)" class="w-14 h-14 rounded-xl bg-slate-700 text-2xl font-bold btn-press">−</button>
+          <input id="timerMinutes" type="number" min="1" max="30" value="5"
+            class="flex-1 h-14 text-center text-2xl font-bold bg-slate-900 rounded-xl border border-slate-600 focus:border-cyan-400 focus:outline-none">
+          <button onclick="adjustTimer(1)" class="w-14 h-14 rounded-xl bg-slate-700 text-2xl font-bold btn-press">+</button>
+        </div>
+      </div>
+
+      <!-- Categories -->
+      <div class="bg-slate-800/60 rounded-2xl p-4 neon-border">
+        <div class="flex items-center justify-between mb-3">
+          <label class="text-sm text-slate-400 font-medium">Categories <span id="categoryCount" class="text-cyan-400"></span></label>
+          <div class="flex gap-2">
+            <button onclick="selectAllCategories()" class="text-xs px-3 py-1.5 rounded-lg bg-cyan-900/50 text-cyan-300 btn-press">Select All</button>
+            <button onclick="clearAllCategories()" class="text-xs px-3 py-1.5 rounded-lg bg-slate-700 text-slate-300 btn-press">Clear All</button>
+          </div>
+        </div>
+        <div id="categoryGrid" class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto scrollbar-hide"></div>
+        <p id="categoryWarning" class="text-red-400 text-xs mt-2 hidden">Select at least one category</p>
+      </div>
+
+      <button id="startBtn" onclick="startGame()"
+        class="w-full h-16 rounded-2xl bg-gradient-to-r from-cyan-500 to-purple-500 text-lg font-black tracking-wider btn-press animate-pulse-glow disabled:opacity-40 disabled:cursor-not-allowed">
+        START GAME
+      </button>
+    </div>
+  </div>
+
+  <!-- REVEAL SCREEN -->
+  <div id="revealScreen" class="screen flex-col min-h-screen items-center justify-center px-6 animate-fade-in">
+    <div class="text-center mb-8 animate-scale-in">
+      <p class="text-slate-400 text-sm uppercase tracking-widest mb-2">Pass the Device</p>
+      <h2 id="turnPlayerName" class="text-3xl sm:text-4xl font-black text-cyan-400"></h2>
+      <p class="text-slate-500 mt-2 text-sm">Only this player should look at the screen</p>
+    </div>
+
+    <div id="holdPad" class="hold-pad w-full max-w-sm aspect-square rounded-3xl neon-border bg-slate-800/80 flex flex-col items-center justify-center cursor-pointer select-none animate-pulse-glow relative overflow-hidden">
+      <div id="holdPadLabel" class="text-center pointer-events-none">
+        <span class="text-5xl mb-4 block">👆</span>
+        <span class="text-xl font-black tracking-wider text-cyan-300">HOLD TO REVEAL</span>
+      </div>
+      <div id="revealContent" class="reveal-content absolute inset-0 flex flex-col items-center justify-center p-6 pointer-events-none">
+        <span id="roleBadge" class="text-sm font-bold uppercase tracking-widest px-4 py-1 rounded-full mb-4"></span>
+        <p id="roleLabel" class="text-slate-400 text-sm mb-2">Your Secret Word</p>
+        <h3 id="secretWord" class="text-3xl sm:text-4xl font-black text-center"></h3>
+        <p id="categoryHint" class="text-slate-500 text-sm mt-4 text-center"></p>
+      </div>
+    </div>
+
+    <p class="text-slate-600 text-xs mt-6 text-center max-w-xs">Release to hide your role instantly. No peeking!</p>
+  </div>
+
+  <!-- NEXT PLAYER SCREEN -->
+  <div id="nextPlayerScreen" class="screen flex-col min-h-screen items-center justify-center px-6 animate-fade-in">
+    <div class="text-center mb-10">
+      <span class="text-6xl mb-4 block">✅</span>
+      <h2 class="text-2xl font-bold text-green-400 mb-2">Role Hidden!</h2>
+      <p class="text-slate-400">Ready for the next player?</p>
+    </div>
+    <button onclick="nextPlayer()" class="w-full max-w-sm h-16 rounded-2xl bg-gradient-to-r from-cyan-500 to-purple-500 text-lg font-black btn-press">
+      NEXT PLAYER →
+    </button>
+    <p id="nextPlayerInfo" class="text-slate-500 text-sm mt-4"></p>
+  </div>
+
+  <!-- END GAME MODAL -->
+  <div id="endModal" class="fixed inset-0 z-40 hidden items-center justify-center bg-black/70 backdrop-blur-sm px-6">
+    <div class="bg-slate-800 rounded-3xl p-6 max-w-sm w-full neon-border animate-scale-in text-center">
+      <span class="text-5xl block mb-4">🗳️</span>
+      <h3 class="text-xl font-black text-cyan-400 mb-2">Time to Vote!</h3>
+      <p class="text-slate-400 text-sm mb-6">Discuss, accuse, and vote out the imposters. Innocents win if all imposters are caught!</p>
+      <button onclick="closeEndModal()" class="w-full h-14 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-500 font-bold btn-press">Back to Setup</button>
+    </div>
+  </div>
+
+  <!-- GAME ON SCREEN -->
+  <div id="gameOnScreen" class="screen flex-col min-h-screen px-4 py-6 animate-fade-in">
+    <div class="text-center mb-6">
+      <h2 class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-cyan-400">GAME ON!</h2>
+      <p class="text-slate-400 text-sm mt-1">Discuss and find the imposters</p>
+      <div id="activeCategoryBadge" class="inline-block mt-3 px-4 py-1.5 rounded-full bg-purple-900/50 border border-purple-500/40 text-purple-300 text-xs font-bold"></div>
+    </div>
+
+    <div class="bg-slate-800/80 rounded-3xl p-6 neon-border text-center mb-6">
+      <p class="text-slate-400 text-xs uppercase tracking-widest mb-2">Time Remaining</p>
+      <div id="countdown" class="text-5xl sm:text-6xl font-black text-cyan-400 tabular-nums">05:00</div>
+    </div>
+
+    <div class="flex-1 bg-slate-800/60 rounded-2xl p-4 neon-border overflow-hidden flex flex-col mb-4">
+      <h3 class="text-sm font-bold text-purple-400 mb-3 uppercase tracking-wider">Category Reference</h3>
+      <div id="categoryReference" class="flex-1 overflow-y-auto scrollbar-hide space-y-2"></div>
+    </div>
+
+    <div class="flex gap-3">
+      <button onclick="endGame()" class="flex-1 h-14 rounded-xl bg-red-900/60 border border-red-700 text-red-300 font-bold btn-press">End Game</button>
+      <button onclick="resetGame()" class="flex-1 h-14 rounded-xl bg-slate-700 border border-slate-600 font-bold btn-press">Reset</button>
+    </div>
+  </div>
+
+<script>
+const CATEGORIES = {
+  "Nepali Culture": [
+    { innocent: "Dhaka Topi", imposter: "Bhadgaunle Topi" },
+    { innocent: "Khukuri", imposter: "Sword" },
+    { innocent: "Dashain", imposter: "Tihar" },
+    { innocent: "Pashupatinath", imposter: "Swayambhunath" },
+    { innocent: "Dohori", imposter: "Lok Geet" },
+    { innocent: "Madal", imposter: "Tabla" },
+    { innocent: "Gunyo Cholo", imposter: "Sari" },
+    { innocent: "Janai Purnima", imposter: "Raksha Bandhan" },
+    { innocent: "Lhosar", imposter: "Maghe Sankranti" },
+    { innocent: "Panche Baja", imposter: "Brass Band" }
+  ],
+  "Nepali Food": [
+    { innocent: "Momo", imposter: "Chowmein" },
+    { innocent: "Dal Bhat", imposter: "Dhido" },
+    { innocent: "Gundruk", imposter: "Sinki" },
+    { innocent: "Sel Roti", imposter: "Puri" },
+    { innocent: "Chatamari", imposter: "Dosa" },
+    { innocent: "Yomari", imposter: "Modak" },
+    { innocent: "Thukpa", imposter: "Ramen" },
+    { innocent: "Sukuti", imposter: "Jerky" },
+    { innocent: "Aloo Tama", imposter: "Aloo Gobi" },
+    { innocent: "Juju Dhau", imposter: "Lassi" }
+  ],
+  "Chiya Pasal Topics": [
+    { innocent: "Politics", imposter: "Share Market" },
+    { innocent: "Land Prices", imposter: "Gossip" },
+    { innocent: "Cricket Match", imposter: "Football Match" },
+    { innocent: "Gold Rate", imposter: "Dollar Rate" },
+    { innocent: "Road Expansion", imposter: "Flyover" },
+    { innocent: "Festival Plans", imposter: "Wedding Plans" },
+    { innocent: "Corruption", imposter: "Tax Evasion" },
+    { innocent: "Neighbor Drama", imposter: "Family Drama" },
+    { innocent: "Load Shedding", imposter: "Internet Outage" },
+    { innocent: "School Fees", imposter: "College Fees" }
+  ],
+  "Kathmandu Problems": [
+    { innocent: "Melamchi Water", imposter: "Tanker Water" },
+    { innocent: "Dust & Pollution", imposter: "Traffic Jam" },
+    { innocent: "Potholes", imposter: "Road Digging" },
+    { innocent: "Garbage Piles", imposter: "Stray Dogs" },
+    { innocent: "Overcrowded Buses", imposter: "Overpriced Taxis" },
+    { innocent: "Load Shedding", imposter: "Low Water Pressure" },
+    { innocent: "Street Vendors", imposter: "Illegal Parking" },
+    { innocent: "Air Quality", imposter: "Noise Pollution" },
+    { innocent: "Rent Increase", imposter: "Broker Commission" },
+    { innocent: "Ring Road Traffic", imposter: "Koteshwor Jam" }
+  ],
+  "Abroad Dreams": [
+    { innocent: "IELTS Score", imposter: "PTE Academic" },
+    { innocent: "US Visa", imposter: "Australia Visa" },
+    { innocent: "Student Loan", imposter: "Education Loan" },
+    { innocent: "PR Application", imposter: "Work Permit" },
+    { innocent: "Consultancy Fee", imposter: "Agent Commission" },
+    { innocent: "Canada Express Entry", imposter: "UK Skilled Worker" },
+    { innocent: "GRE Exam", imposter: "GMAT Exam" },
+    { innocent: "Scholarship", imposter: "Sponsorship" },
+    { innocent: "Dollar Rate", imposter: "Pound Rate" },
+    { innocent: "NOC Letter", imposter: "Experience Letter" }
+  ],
+  "Nepali Typical/Slang Words": [
+    { innocent: "Guffadi", imposter: "Haami" },
+    { innocent: "Khatra", imposter: "Dammi" },
+    { innocent: "Jhole", imposter: "Pole" },
+    { innocent: "Thulo", imposter: "Sano" },
+    { innocent: "Muji", imposter: "Kta" },
+    { innocent: "Fohore", imposter: "Jholey" },
+    { innocent: "Bindaas", imposter: "Chill" },
+    { innocent: "Janne", imposter: "Najanne" },
+    { innocent: "Parewa", imposter: "Pareli" },
+    { innocent: "Lamo", imposter: "Choto" }
+  ],
+  "Festivals": [
+    { innocent: "Dashain", imposter: "Tihar" },
+    { innocent: "Holi", imposter: "Chhath" },
+    { innocent: "Teej", imposter: "Rishi Panchami" },
+    { innocent: "Buddha Jayanti", imposter: "Lumbini Day" },
+    { innocent: "Indra Jatra", imposter: "Gai Jatra" },
+    { innocent: "Maghe Sankranti", imposter: "Lhosar" },
+    { innocent: "Janai Purnima", imposter: "Krishna Janmashtami" },
+    { innocent: "Maha Shivaratri", imposter: "Ekadashi" },
+    { innocent: "Bhai Tika", imposter: "Rakhi" },
+    { innocent: "New Year", imposter: "Christmas" }
+  ],
+  "Nepali Cities": [
+    { innocent: "Kathmandu", imposter: "Lalitpur" },
+    { innocent: "Pokhara", imposter: "Chitwan" },
+    { innocent: "Biratnagar", imposter: "Birgunj" },
+    { innocent: "Dharan", imposter: "Itahari" },
+    { innocent: "Butwal", imposter: "Bhairahawa" },
+    { innocent: "Nepalgunj", imposter: "Dhangadhi" },
+    { innocent: "Hetauda", imposter: "Bharatpur" },
+    { innocent: "Janakpur", imposter: "Birgunj" },
+    { innocent: "Damak", imposter: "Jhapa" },
+    { innocent: "Palpa", imposter: "Gulmi" }
+  ],
+  "Places in Nepal": [
+    { innocent: "Everest Base Camp", imposter: "Annapurna Base Camp" },
+    { innocent: "Phewa Lake", imposter: "Rara Lake" },
+    { innocent: "Chitwan National Park", imposter: "Bardia National Park" },
+    { innocent: "Lumbini", imposter: "Janakpur" },
+    { innocent: "Nagarkot", imposter: "Dhulikhel" },
+    { innocent: "Muktinath", imposter: "Gosainkunda" },
+    { innocent: "Bandipur", imposter: "Ghandruk" },
+    { innocent: "Ilam", imposter: "Taplejung" },
+    { innocent: "Mustang", imposter: "Manang" },
+    { innocent: "Swayambhunath", imposter: "Boudhanath" }
+  ],
+  "School": [
+    { innocent: "Homework", imposter: "Assignment" },
+    { innocent: "PTM", imposter: "Open Day" },
+    { innocent: "Assembly", imposter: "Recess" },
+    { innocent: "Report Card", imposter: "Mark Sheet" },
+    { innocent: "School Bus", imposter: "Van Service" },
+    { innocent: "Principal", imposter: "Vice Principal" },
+    { innocent: "Lab Coat", imposter: "Sports Uniform" },
+    { innocent: "Detention", imposter: "Suspension" },
+    { innocent: "Annual Day", imposter: "Sports Day" },
+    { innocent: "Tuition", imposter: "Coaching" }
+  ],
+  "College": [
+    { innocent: "Freshers Party", imposter: "Farewell" },
+    { innocent: "Internal Exam", imposter: "Board Exam" },
+    { innocent: "Dean", imposter: "HOD" },
+    { innocent: "Campus", imposter: "Affiliated College" },
+    { innocent: "Ragging", imposter: "Orientation" },
+    { innocent: "Back Paper", imposter: "Supplementary" },
+    { innocent: "Semester", imposter: "Trimester" },
+    { innocent: "Library Card", imposter: "ID Card" },
+    { innocent: "Canteen", imposter: "Mess" },
+    { innocent: "Project Work", imposter: "Thesis" }
+  ],
+  "Exams": [
+    { innocent: "SEE", imposter: "NEB" },
+    { innocent: "IOE Entrance", imposter: "KU Entrance" },
+    { innocent: "Lok Sewa", imposter: "PSC Exam" },
+    { innocent: "Medical Entrance", imposter: "Engineering Entrance" },
+    { innocent: "Mock Test", imposter: "Practice Paper" },
+    { innocent: "Negative Marking", imposter: "Grace Marks" },
+    { innocent: "Admit Card", imposter: "Registration Slip" },
+    { innocent: "Topper", imposter: "Passout" },
+    { innocent: "Cheating", imposter: "Copying" },
+    { innocent: "Re-exam", imposter: "Retest" }
+  ],
+  "Hostel Life": [
+    { innocent: "Roommate", imposter: "Bunkmate" },
+    { innocent: "Warden", imposter: "Caretaker" },
+    { innocent: "Curfew", imposter: "Lights Out" },
+    { innocent: "Mess Food", imposter: "Tiffin Service" },
+    { innocent: "Laundry", imposter: "Dhobi" },
+    { innocent: "Late Night Maggi", imposter: "Midnight Snack" },
+    { innocent: "Bunking Class", imposter: "Proxy Attendance" },
+    { innocent: "Common Room", imposter: "TV Room" },
+    { innocent: "Room Inspection", imposter: "Surprise Check" },
+    { innocent: "Hostel Fee", imposter: "Security Deposit" }
+  ],
+  "Jobs & Careers": [
+    { innocent: "Resume", imposter: "CV" },
+    { innocent: "Interview", imposter: "Group Discussion" },
+    { innocent: "Internship", imposter: "Traineeship" },
+    { innocent: "Salary", imposter: "CTC" },
+    { innocent: "Promotion", imposter: "Increment" },
+    { innocent: "Resignation", imposter: "Termination" },
+    { innocent: "Freelance", imposter: "Contract" },
+    { innocent: "Government Job", imposter: "Private Job" },
+    { innocent: "LinkedIn", imposter: "Job Portal" },
+    { innocent: "Notice Period", imposter: "Probation" }
+  ],
+  "Office Life": [
+    { innocent: "Meeting", imposter: "Conference Call" },
+    { innocent: "Deadline", imposter: "Target" },
+    { innocent: "Boss", imposter: "Manager" },
+    { innocent: "Coffee Break", imposter: "Lunch Break" },
+    { innocent: "Overtime", imposter: "Weekend Work" },
+    { innocent: "PPT", imposter: "Excel Sheet" },
+    { innocent: "Team Building", imposter: "Office Party" },
+    { innocent: "WFH", imposter: "Hybrid Mode" },
+    { innocent: "Appraisal", imposter: "Performance Review" },
+    { innocent: "ID Card", imposter: "Access Badge" }
+  ],
+  "Transportation": [
+    { innocent: "Micro Bus", imposter: "Tempo" },
+    { innocent: "Taxi", imposter: "Ride Share" },
+    { innocent: "Rickshaw", imposter: "Tuk Tuk" },
+    { innocent: "Cable Car", imposter: "Ropeway" },
+    { innocent: "Flight", imposter: "Helicopter" },
+    { innocent: "Train", imposter: "Metro" },
+    { innocent: "Ferry", imposter: "Boat" },
+    { innocent: "Highway", imposter: "Bypass" },
+    { innocent: "Toll Booth", imposter: "Checkpoint" },
+    { innocent: "Bus Stop", imposter: "Bus Park" }
+  ],
+  "Vehicles": [
+    { innocent: "Scooter", imposter: "Motorcycle" },
+    { innocent: "SUV", imposter: "Sedan" },
+    { innocent: "Truck", imposter: "Pickup" },
+    { innocent: "Electric Car", imposter: "Hybrid Car" },
+    { innocent: "Bicycle", imposter: "E-Bike" },
+    { innocent: "Jeep", imposter: "Land Cruiser" },
+    { innocent: "Ambulance", imposter: "Fire Truck" },
+    { innocent: "Bulldozer", imposter: "Excavator" },
+    { innocent: "Auto Rickshaw", imposter: "Electric Rickshaw" },
+    { innocent: "School Van", imposter: "Private Car" }
+  ],
+  "Technology": [
+    { innocent: "Smartphone", imposter: "Tablet" },
+    { innocent: "Laptop", imposter: "Desktop" },
+    { innocent: "WiFi", imposter: "Mobile Data" },
+    { innocent: "Bluetooth", imposter: "NFC" },
+    { innocent: "Cloud Storage", imposter: "USB Drive" },
+    { innocent: "AI", imposter: "Machine Learning" },
+    { innocent: "VR Headset", imposter: "AR Glasses" },
+    { innocent: "Smart Watch", imposter: "Fitness Band" },
+    { innocent: "Drone", imposter: "RC Helicopter" },
+    { innocent: "Power Bank", imposter: "Charger" }
+  ],
+  "Social Media": [
+    { innocent: "Instagram", imposter: "TikTok" },
+    { innocent: "Facebook", imposter: "Twitter" },
+    { innocent: "YouTube", imposter: "Vimeo" },
+    { innocent: "Snapchat", imposter: "BeReal" },
+    { innocent: "LinkedIn", imposter: "Indeed" },
+    { innocent: "WhatsApp", imposter: "Telegram" },
+    { innocent: "Reels", imposter: "Stories" },
+    { innocent: "Influencer", imposter: "Content Creator" },
+    { innocent: "Hashtag", imposter: "Mention" },
+    { innocent: "DM", imposter: "Comment" }
+  ],
+  "Video Games": [
+    { innocent: "PUBG", imposter: "Free Fire" },
+    { innocent: "FIFA", imposter: "PES" },
+    { innocent: "Minecraft", imposter: "Roblox" },
+    { innocent: "GTA", imposter: "Watch Dogs" },
+    { innocent: "Call of Duty", imposter: "Battlefield" },
+    { innocent: "Fortnite", imposter: "Apex Legends" },
+    { innocent: "Among Us", imposter: "Fall Guys" },
+    { innocent: "Valorant", imposter: "CS2" },
+    { innocent: "Mobile Legends", imposter: "Arena of Valor" },
+    { innocent: "Clash of Clans", imposter: "Clash Royale" }
+  ],
+  "Football": [
+    { innocent: "Messi", imposter: "Ronaldo" },
+    { innocent: "Penalty", imposter: "Free Kick" },
+    { innocent: "Goalkeeper", imposter: "Defender" },
+    { innocent: "Offside", imposter: "Handball" },
+    { innocent: "Premier League", imposter: "La Liga" },
+    { innocent: "World Cup", imposter: "Euro Cup" },
+    { innocent: "Hat Trick", imposter: "Brace" },
+    { innocent: "Red Card", imposter: "Yellow Card" },
+    { innocent: "Striker", imposter: "Midfielder" },
+    { innocent: "Transfer", imposter: "Loan" }
+  ],
+  "Cricket": [
+    { innocent: "Sachin", imposter: "Kohli" },
+    { innocent: "Six", imposter: "Four" },
+    { innocent: "LBW", imposter: "Caught Behind" },
+    { innocent: "IPL", imposter: "BBL" },
+    { innocent: "Test Match", imposter: "T20" },
+    { innocent: "Bowler", imposter: "All-Rounder" },
+    { innocent: "Century", imposter: "Half Century" },
+    { innocent: "DRS", imposter: "Third Umpire" },
+    { innocent: "Sandeep Lamichhane", imposter: "Kushal Bhurtel" },
+    { innocent: "Nepal Cricket", imposter: "Afghan Cricket" }
+  ],
+  "Basketball": [
+    { innocent: "LeBron", imposter: "Curry" },
+    { innocent: "Dunk", imposter: "Layup" },
+    { innocent: "Three Pointer", imposter: "Free Throw" },
+    { innocent: "NBA", imposter: "EuroLeague" },
+    { innocent: "Point Guard", imposter: "Shooting Guard" },
+    { innocent: "Rebound", imposter: "Assist" },
+    { innocent: "Slam Dunk", imposter: "Alley-Oop" },
+    { innocent: "Playoffs", imposter: "Finals" },
+    { innocent: "Lakers", imposter: "Warriors" },
+    { innocent: "Foul", imposter: "Technical Foul" }
+  ],
+  "Sports": [
+    { innocent: "Marathon", imposter: "Sprint" },
+    { innocent: "Swimming", imposter: "Diving" },
+    { innocent: "Tennis", imposter: "Badminton" },
+    { innocent: "Boxing", imposter: "Wrestling" },
+    { innocent: "Golf", imposter: "Cricket" },
+    { innocent: "Olympics", imposter: "Asian Games" },
+    { innocent: "Gold Medal", imposter: "Silver Medal" },
+    { innocent: "Coach", imposter: "Trainer" },
+    { innocent: "Stadium", imposter: "Arena" },
+    { innocent: "Referee", imposter: "Umpire" }
+  ],
+  "Bollywood": [
+    { innocent: "Shah Rukh Khan", imposter: "Salman Khan" },
+    { innocent: "Dangal", imposter: "Sultan" },
+    { innocent: "Item Song", imposter: "Romantic Song" },
+    { innocent: "Karachi", imposter: "Mumbai" },
+    { innocent: "Filmfare", imposter: "IIFA" },
+    { innocent: "Masala Movie", imposter: "Art Film" },
+    { innocent: "Dubbing", imposter: "Remake" },
+    { innocent: "OTT Release", imposter: "Theatrical Release" },
+    { innocent: "Nepotism", imposter: "Outsider" },
+    { innocent: "Interval", imposter: "Climax" }
+  ],
+  "Nepali Movies": [
+    { innocent: "Loot", imposter: "Kabaddi" },
+    { innocent: "Chhakka Panja", imposter: "Woda Number 6" },
+    { innocent: "Prem Geet", imposter: "Jerryy" },
+    { innocent: "Kohinoor", imposter: "Pashupati Prasad" },
+    { innocent: "Nai Nabhannu La", imposter: "Hostel" },
+    { innocent: "Dhanapati", imposter: "Ghamad Shere" },
+    { innocent: "Bulbul", imposter: "Jhola" },
+    { innocent: "Talakjung vs Tulke", imposter: "Seto Surya" },
+    { innocent: "Kalo Pothi", imposter: "White Sun" },
+    { innocent: "Nepali Film Industry", imposter: "Kollywood" }
+  ],
+  "Nepali Celebrities": [
+    { innocent: "Rajesh Hamal", imposter: "Bhuwan KC" },
+    { innocent: "Anmol KC", imposter: "Pradeep Khadka" },
+    { innocent: "Sugam Pokharel", imposter: "Nir Shah" },
+    { innocent: "Swoopna Suman", imposter: "Neetesh Jung Kunwar" },
+    { innocent: "Kutumba", imposter: "1974 AD" },
+    { innocent: "Sushma Karki", imposter: "Barsha Raut" },
+    { innocent: "Dhurmus Suntali", imposter: "Maha Jodi" },
+    { innocent: "Rabindra Mishra", imposter: "Balen Shah" },
+    { innocent: "Sandeep Lamichhane", imposter: "Paras Khadka" },
+    { innocent: "Samragyee RL Shah", imposter: "Namrata Shrestha" }
+  ],
+  "World Celebrities": [
+    { innocent: "Taylor Swift", imposter: "Ariana Grande" },
+    { innocent: "Elon Musk", imposter: "Jeff Bezos" },
+    { innocent: "Beyonce", imposter: "Rihanna" },
+    { innocent: "Tom Cruise", imposter: "Brad Pitt" },
+    { innocent: "Kim Kardashian", imposter: "Kylie Jenner" },
+    { innocent: "Cristiano Ronaldo", imposter: "Neymar" },
+    { innocent: "MrBeast", imposter: "PewDiePie" },
+    { innocent: "Oprah", imposter: "Ellen" },
+    { innocent: "Drake", imposter: "The Weeknd" },
+    { innocent: "Zendaya", imposter: "Selena Gomez" }
+  ],
+  "Music": [
+    { innocent: "Pop", imposter: "Rock" },
+    { innocent: "Hip Hop", imposter: "Rap" },
+    { innocent: "Classical", imposter: "Orchestra" },
+    { innocent: "EDM", imposter: "House Music" },
+    { innocent: "Album", imposter: "Single" },
+    { innocent: "Concert", imposter: "Festival" },
+    { innocent: "Remix", imposter: "Cover" },
+    { innocent: "Billboard", imposter: "Spotify Charts" },
+    { innocent: "Lok Dohori", imposter: "Adhunik Geet" },
+    { innocent: "K-Pop", imposter: "J-Pop" }
+  ],
+  "Singers": [
+    { innocent: "Arijit Singh", imposter: "Atif Aslam" },
+    { innocent: "Ed Sheeran", imposter: "Shawn Mendes" },
+    { innocent: "BTS", imposter: "Blackpink" },
+    { innocent: "Justin Bieber", imposter: "Harry Styles" },
+    { innocent: "Lata Mangeshkar", imposter: "Asha Bhosle" },
+    { innocent: "Narayan Gopal", imposter: "Tara Devi" },
+    { innocent: "Sugam Pokharel", imposter: "Kiran Kharel" },
+    { innocent: "Adele", imposter: "Sam Smith" },
+    { innocent: "Eminem", imposter: "Drake" },
+    { innocent: "Dolly Parton", imposter: "Taylor Swift" }
+  ],
+  "Musical Instruments": [
+    { innocent: "Guitar", imposter: "Ukulele" },
+    { innocent: "Piano", imposter: "Keyboard" },
+    { innocent: "Violin", imposter: "Cello" },
+    { innocent: "Flute", imposter: "Clarinet" },
+    { innocent: "Drums", imposter: "Tabla" },
+    { innocent: "Sitar", imposter: "Sarod" },
+    { innocent: "Madal", imposter: "Dholak" },
+    { innocent: "Trumpet", imposter: "Saxophone" },
+    { innocent: "Harmonica", imposter: "Accordion" },
+    { innocent: "Bass Guitar", imposter: "Electric Guitar" }
+  ],
+  "TV Shows": [
+    { innocent: "Breaking Bad", imposter: "Better Call Saul" },
+    { innocent: "Friends", imposter: "How I Met Your Mother" },
+    { innocent: "Game of Thrones", imposter: "House of the Dragon" },
+    { innocent: "Stranger Things", imposter: "Dark" },
+    { innocent: "The Office", imposter: "Parks and Recreation" },
+    { innocent: "Money Heist", imposter: "Squid Game" },
+    { innocent: "Sherlock", imposter: "Luther" },
+    { innocent: "Narcos", imposter: "El Chapo" },
+    { innocent: "Suits", imposter: "Billions" },
+    { innocent: "Korean Drama", imposter: "Japanese Drama" }
+  ],
+  "Movies": [
+    { innocent: "Inception", imposter: "Interstellar" },
+    { innocent: "Avengers", imposter: "Justice League" },
+    { innocent: "Titanic", imposter: "The Notebook" },
+    { innocent: "Joker", imposter: "The Dark Knight" },
+    { innocent: "Parasite", imposter: "Squid Game" },
+    { innocent: "Horror", imposter: "Thriller" },
+    { innocent: "Sequel", imposter: "Prequel" },
+    { innocent: "Oscar", imposter: "Golden Globe" },
+    { innocent: "Box Office", imposter: "OTT Views" },
+    { innocent: "Director", imposter: "Producer" }
+  ],
+  "Books": [
+    { innocent: "Harry Potter", imposter: "Lord of the Rings" },
+    { innocent: "Fiction", imposter: "Non-Fiction" },
+    { innocent: "Novel", imposter: "Short Story" },
+    { innocent: "Biography", imposter: "Autobiography" },
+    { innocent: "Paperback", imposter: "Hardcover" },
+    { innocent: "Kindle", imposter: "Audiobook" },
+    { innocent: "Palpasa Cafe", imposter: "Summer Love" },
+    { innocent: "Karnali Blues", imposter: "Phool ko Aankha" },
+    { innocent: "Library", imposter: "Bookstore" },
+    { innocent: "Author", imposter: "Editor" }
+  ],
+  "Body Parts": [
+    { innocent: "Elbow", imposter: "Knee" },
+    { innocent: "Eyebrow", imposter: "Eyelash" },
+    { innocent: "Thumb", imposter: "Index Finger" },
+    { innocent: "Ankle", imposter: "Wrist" },
+    { innocent: "Liver", imposter: "Kidney" },
+    { innocent: "Spine", imposter: "Rib Cage" },
+    { innocent: "Tongue", imposter: "Gums" },
+    { innocent: "Forehead", imposter: "Temple" },
+    { innocent: "Palm", imposter: "Sole" },
+    { innocent: "Shoulder", imposter: "Hip" }
+  ],
+  "Emotions": [
+    { innocent: "Joy", imposter: "Excitement" },
+    { innocent: "Anger", imposter: "Frustration" },
+    { innocent: "Fear", imposter: "Anxiety" },
+    { innocent: "Jealousy", imposter: "Envy" },
+    { innocent: "Pride", imposter: "Arrogance" },
+    { innocent: "Guilt", imposter: "Shame" },
+    { innocent: "Hope", imposter: "Optimism" },
+    { innocent: "Loneliness", imposter: "Boredom" },
+    { innocent: "Surprise", imposter: "Shock" },
+    { innocent: "Nostalgia", imposter: "Melancholy" }
+  ],
+  "Relationships": [
+    { innocent: "Boyfriend", imposter: "Girlfriend" },
+    { innocent: "Crush", imposter: "Best Friend" },
+    { innocent: "Engagement", imposter: "Marriage" },
+    { innocent: "Long Distance", imposter: "Situationship" },
+    { innocent: "First Date", imposter: "Blind Date" },
+    { innocent: "Proposal", imposter: "Confession" },
+    { innocent: "Ex", imposter: "Rebound" },
+    { innocent: "Soulmate", imposter: "Twin Flame" },
+    { innocent: "Trust", imposter: "Loyalty" },
+    { innocent: "Commitment", imposter: "Compatibility" }
+  ],
+  "Family": [
+    { innocent: "Mother", imposter: "Aunt" },
+    { innocent: "Grandfather", imposter: "Grandmother" },
+    { innocent: "Cousin", imposter: "Sibling" },
+    { innocent: "Nephew", imposter: "Niece" },
+    { innocent: "In-Laws", imposter: "Relatives" },
+    { innocent: "Family Reunion", imposter: "Family Trip" },
+    { innocent: "Elder Son", imposter: "Younger Son" },
+    { innocent: "Bua", imposter: "Kaki" },
+    { innocent: "Mama", imposter: "Fufa" },
+    { innocent: "Dai", imposter: "Bhai" }
+  ],
+  "Childhood": [
+    { innocent: "Hide and Seek", imposter: "Tag" },
+    { innocent: "Marbles", imposter: "Lattu" },
+    { innocent: "Cartoon", imposter: "Anime" },
+    { innocent: "Tiffin Box", imposter: "Lunch Box" },
+    { innocent: "Swing", imposter: "Slide" },
+    { innocent: "Comics", imposter: "Storybooks" },
+    { innocent: "Pocket Money", imposter: "Allowance" },
+    { innocent: "Summer Vacation", imposter: "Winter Break" },
+    { innocent: "Bicycle", imposter: "Tricycle" },
+    { innocent: "Kite Flying", imposter: "Balloon" }
+  ],
+  "Animals": [
+    { innocent: "Tiger", imposter: "Leopard" },
+    { innocent: "Elephant", imposter: "Rhino" },
+    { innocent: "Dog", imposter: "Wolf" },
+    { innocent: "Cat", imposter: "Lynx" },
+    { innocent: "Monkey", imposter: "Ape" },
+    { innocent: "Cow", imposter: "Buffalo" },
+    { innocent: "Snake", imposter: "Lizard" },
+    { innocent: "Rabbit", imposter: "Hare" },
+    { innocent: "Horse", imposter: "Donkey" },
+    { innocent: "Panda", imposter: "Koala" }
+  ],
+  "Birds": [
+    { innocent: "Eagle", imposter: "Hawk" },
+    { innocent: "Parrot", imposter: "Macaw" },
+    { innocent: "Peacock", imposter: "Pheasant" },
+    { innocent: "Crow", imposter: "Raven" },
+    { innocent: "Sparrow", imposter: "Finch" },
+    { innocent: "Owl", imposter: "Bat" },
+    { innocent: "Penguin", imposter: "Puffin" },
+    { innocent: "Flamingo", imposter: "Crane" },
+    { innocent: "Dove", imposter: "Pigeon" },
+    { innocent: "Hummingbird", imposter: "Kingfisher" }
+  ],
+  "Sea Creatures": [
+    { innocent: "Shark", imposter: "Dolphin" },
+    { innocent: "Octopus", imposter: "Squid" },
+    { innocent: "Whale", imposter: "Orca" },
+    { innocent: "Jellyfish", imposter: "Sea Anemone" },
+    { innocent: "Crab", imposter: "Lobster" },
+    { innocent: "Starfish", imposter: "Sea Urchin" },
+    { innocent: "Seahorse", imposter: "Pipefish" },
+    { innocent: "Coral", imposter: "Seaweed" },
+    { innocent: "Turtle", imposter: "Tortoise" },
+    { innocent: "Clownfish", imposter: "Angelfish" }
+  ],
+  "Plants": [
+    { innocent: "Rose", imposter: "Tulip" },
+    { innocent: "Bamboo", imposter: "Cane" },
+    { innocent: "Cactus", imposter: "Succulent" },
+    { innocent: "Oak Tree", imposter: "Maple Tree" },
+    { innocent: "Fern", imposter: "Moss" },
+    { innocent: "Sunflower", imposter: "Daisy" },
+    { innocent: "Bonsai", imposter: "Topiary" },
+    { innocent: "Pine", imposter: "Cedar" },
+    { innocent: "Lotus", imposter: "Lily" },
+    { innocent: "Herb", imposter: "Shrub" }
+  ],
+  "Flowers": [
+    { innocent: "Marigold", imposter: "Sunflower" },
+    { innocent: "Jasmine", imposter: "Lavender" },
+    { innocent: "Orchid", imposter: "Iris" },
+    { innocent: "Daffodil", imposter: "Narcissus" },
+    { innocent: "Hibiscus", imposter: "Bougainvillea" },
+    { innocent: "Chrysanthemum", imposter: "Carnation" },
+    { innocent: "Poppy", imposter: "Pansy" },
+    { innocent: "Magnolia", imposter: "Camellia" },
+    { innocent: "Godavari", imposter: "Rhododendron" },
+    { innocent: "Bouquet", imposter: "Garland" }
+  ],
+  "Fruits": [
+    { innocent: "Mango", imposter: "Papaya" },
+    { innocent: "Apple", imposter: "Pear" },
+    { innocent: "Banana", imposter: "Plantain" },
+    { innocent: "Orange", imposter: "Tangerine" },
+    { innocent: "Watermelon", imposter: "Muskmelon" },
+    { innocent: "Grapes", imposter: "Berries" },
+    { innocent: "Pineapple", imposter: "Jackfruit" },
+    { innocent: "Litchi", imposter: "Longan" },
+    { innocent: "Kiwi", imposter: "Guava" },
+    { innocent: "Avocado", imposter: "Dragon Fruit" }
+  ],
+  "Vegetables": [
+    { innocent: "Potato", imposter: "Sweet Potato" },
+    { innocent: "Tomato", imposter: "Cherry Tomato" },
+    { innocent: "Cauliflower", imposter: "Broccoli" },
+    { innocent: "Spinach", imposter: "Kale" },
+    { innocent: "Onion", imposter: "Garlic" },
+    { innocent: "Carrot", imposter: "Radish" },
+    { innocent: "Pumpkin", imposter: "Squash" },
+    { innocent: "Cabbage", imposter: "Lettuce" },
+    { innocent: "Eggplant", imposter: "Zucchini" },
+    { innocent: "Mushroom", imposter: "Truffle" }
+  ],
+  "Fast Food": [
+    { innocent: "Burger", imposter: "Sandwich" },
+    { innocent: "Pizza", imposter: "Calzone" },
+    { innocent: "Fries", imposter: "Wedges" },
+    { innocent: "Hot Dog", imposter: "Sub" },
+    { innocent: "Nuggets", imposter: "Popcorn Chicken" },
+    { innocent: "Taco", imposter: "Burrito" },
+    { innocent: "Wrap", imposter: "Roll" },
+    { innocent: "KFC", imposter: "McDonald's" },
+    { innocent: "Momo", imposter: "Chowmein" },
+    { innocent: "Instant Noodles", imposter: "Cup Noodles" }
+  ],
+  "Desserts": [
+    { innocent: "Ice Cream", imposter: "Frozen Yogurt" },
+    { innocent: "Cake", imposter: "Pastry" },
+    { innocent: "Brownie", imposter: "Cookie" },
+    { innocent: "Jalebi", imposter: "Gulab Jamun" },
+    { innocent: "Rasgulla", imposter: "Rasmalai" },
+    { innocent: "Cheesecake", imposter: "Mousse" },
+    { innocent: "Pudding", imposter: "Custard" },
+    { innocent: "Donut", imposter: "Muffin" },
+    { innocent: "Laddu", imposter: "Barfi" },
+    { innocent: "Chocolate", imposter: "Caramel" }
+  ],
+  "Drinks": [
+    { innocent: "Coffee", imposter: "Tea" },
+    { innocent: "Coke", imposter: "Pepsi" },
+    { innocent: "Lassi", imposter: "Buttermilk" },
+    { innocent: "Smoothie", imposter: "Milkshake" },
+    { innocent: "Beer", imposter: "Wine" },
+    { innocent: "Juice", imposter: "Soda" },
+    { innocent: "Chiya", imposter: "Green Tea" },
+    { innocent: "Mocktail", imposter: "Cocktail" },
+    { innocent: "Energy Drink", imposter: "Sports Drink" },
+    { innocent: "Hot Chocolate", imposter: "Cappuccino" }
+  ],
+  "Party Items": [
+    { innocent: "Balloon", imposter: "Confetti" },
+    { innocent: "Cake", imposter: "Cupcake" },
+    { innocent: "DJ", imposter: "Live Band" },
+    { innocent: "Disco Light", imposter: "Fairy Light" },
+    { innocent: "Party Hat", imposter: "Mask" },
+    { innocent: "Champagne", imposter: "Sparkling Juice" },
+    { innocent: "Piñata", imposter: "Gift Box" },
+    { innocent: "Streamers", imposter: "Banners" },
+    { innocent: "Karaoke", imposter: "Dance Floor" },
+    { innocent: "Fireworks", imposter: "Sparklers" }
+  ],
+  "Clothing": [
+    { innocent: "Shirt", imposter: "T-Shirt" },
+    { innocent: "Jeans", imposter: "Trousers" },
+    { innocent: "Jacket", imposter: "Coat" },
+    { innocent: "Sweater", imposter: "Hoodie" },
+    { innocent: "Sari", imposter: "Lehenga" },
+    { innocent: "Kurta", imposter: "Waistcoat" },
+    { innocent: "Blazer", imposter: "Suit" },
+    { innocent: "Shorts", imposter: "Skirt" },
+    { innocent: "Scarf", imposter: "Shawl" },
+    { innocent: "Uniform", imposter: "Tracksuit" }
+  ],
+  "Footwear": [
+    { innocent: "Sneakers", imposter: "Running Shoes" },
+    { innocent: "Sandals", imposter: "Flip Flops" },
+    { innocent: "Boots", imposter: "Ankle Boots" },
+    { innocent: "Heels", imposter: "Wedges" },
+    { innocent: "Loafers", imposter: "Moccasins" },
+    { innocent: "Crocs", imposter: "Clogs" },
+    { innocent: "Formal Shoes", imposter: "Casual Shoes" },
+    { innocent: "Slippers", imposter: "House Shoes" },
+    { innocent: "Cleats", imposter: "Studs" },
+    { innocent: "Rain Boots", imposter: "Snow Boots" }
+  ],
+  "Fashion": [
+    { innocent: "Vintage", imposter: "Retro" },
+    { innocent: "Streetwear", imposter: "Athleisure" },
+    { innocent: "Minimalist", imposter: "Bohemian" },
+    { innocent: "Runway", imposter: "Lookbook" },
+    { innocent: "Accessories", imposter: "Jewelry" },
+    { innocent: "Designer", imposter: "Boutique" },
+    { innocent: "Trend", imposter: "Classic" },
+    { innocent: "Makeup", imposter: "Skincare" },
+    { innocent: "Perfume", imposter: "Deodorant" },
+    { innocent: "Sunglasses", imposter: "Eyeglasses" }
+  ],
+  "Household Items": [
+    { innocent: "Vacuum", imposter: "Broom" },
+    { innocent: "Iron", imposter: "Steamer" },
+    { innocent: "Fan", imposter: "AC" },
+    { innocent: "Bulb", imposter: "Tube Light" },
+    { innocent: "Mirror", imposter: "Window" },
+    { innocent: "Curtain", imposter: "Blinds" },
+    { innocent: "Rug", imposter: "Carpet" },
+    { innocent: "Trash Can", imposter: "Recycling Bin" },
+    { innocent: "Extension Cord", imposter: "Power Strip" },
+    { innocent: "Inverter", imposter: "Generator" }
+  ],
+  "Bedroom Items": [
+    { innocent: "Pillow", imposter: "Cushion" },
+    { innocent: "Blanket", imposter: "Comforter" },
+    { innocent: "Mattress", imposter: "Bed Frame" },
+    { innocent: "Wardrobe", imposter: "Dresser" },
+    { innocent: "Nightstand", imposter: "Bookshelf" },
+    { innocent: "Alarm Clock", imposter: "Phone Alarm" },
+    { innocent: "Mosquito Net", imposter: "Bed Sheet" },
+    { innocent: "Lamp", imposter: "Night Light" },
+    { innocent: "Mirror", imposter: "Vanity" },
+    { innocent: "Slippers", imposter: "Robe" }
+  ],
+  "Kitchen Items": [
+    { innocent: "Knife", imposter: "Scissors" },
+    { innocent: "Pan", imposter: "Pot" },
+    { innocent: "Blender", imposter: "Mixer" },
+    { innocent: "Microwave", imposter: "Oven" },
+    { innocent: "Rice Cooker", imposter: "Pressure Cooker" },
+    { innocent: "Cutting Board", imposter: "Tray" },
+    { innocent: "Spatula", imposter: "Ladle" },
+    { innocent: "Fridge", imposter: "Freezer" },
+    { innocent: "Gas Stove", imposter: "Induction" },
+    { innocent: "Tiffin Box", imposter: "Lunch Box" }
+  ],
+  "Shops & Businesses": [
+    { innocent: "Grocery Store", imposter: "Supermarket" },
+    { innocent: "Pharmacy", imposter: "Medical Store" },
+    { innocent: "Bakery", imposter: "Sweet Shop" },
+    { innocent: "Tailor", imposter: "Boutique" },
+    { innocent: "Hardware Store", imposter: "Electronics Shop" },
+    { innocent: "Bookstore", imposter: "Stationery" },
+    { innocent: "Restaurant", imposter: "Cafe" },
+    { innocent: "Salon", imposter: "Spa" },
+    { innocent: "Petrol Pump", imposter: "Gas Station" },
+    { innocent: "Wholesale", imposter: "Retail" }
+  ],
+  "Money": [
+    { innocent: "Cash", imposter: "Digital Payment" },
+    { innocent: "Wallet", imposter: "Purse" },
+    { innocent: "Salary", imposter: "Bonus" },
+    { innocent: "Loan", imposter: "EMI" },
+    { innocent: "Savings", imposter: "Investment" },
+    { innocent: "Budget", imposter: "Expense" },
+    { innocent: "Rupee", imposter: "Dollar" },
+    { innocent: "Change", imposter: "Tip" },
+    { innocent: "Pocket Money", imposter: "Allowance" },
+    { innocent: "Inflation", imposter: "Recession" }
+  ],
+  "Banking": [
+    { innocent: "Savings Account", imposter: "Current Account" },
+    { innocent: "ATM", imposter: "CDM" },
+    { innocent: "Credit Card", imposter: "Debit Card" },
+    { innocent: "Fixed Deposit", imposter: "Recurring Deposit" },
+    { innocent: "Loan", imposter: "Overdraft" },
+    { innocent: "Cheque", imposter: "Demand Draft" },
+    { innocent: "Mobile Banking", imposter: "Internet Banking" },
+    { innocent: "Interest Rate", imposter: "Service Charge" },
+    { innocent: "Branch", imposter: "ATM Booth" },
+    { innocent: "KYC", imposter: "PAN Card" }
+  ],
+  "Shopping": [
+    { innocent: "Mall", imposter: "Market" },
+    { innocent: "Online Shopping", imposter: "In-Store" },
+    { innocent: "Discount", imposter: "Cashback" },
+    { innocent: "Cart", imposter: "Wishlist" },
+    { innocent: "Return", imposter: "Exchange" },
+    { innocent: "Bargain", imposter: "Negotiate" },
+    { innocent: "Sale", imposter: "Clearance" },
+    { innocent: "Receipt", imposter: "Invoice" },
+    { innocent: "Delivery", imposter: "Pickup" },
+    { innocent: "Brand Outlet", imposter: "Thrift Store" }
+  ],
+  "Brands": [
+    { innocent: "Nike", imposter: "Adidas" },
+    { innocent: "Apple", imposter: "Samsung" },
+    { innocent: "Coca-Cola", imposter: "Pepsi" },
+    { innocent: "Toyota", imposter: "Honda" },
+    { innocent: "Zara", imposter: "H&M" },
+    { innocent: "Starbucks", imposter: "Costa Coffee" },
+    { innocent: "Amazon", imposter: "Flipkart" },
+    { innocent: "Google", imposter: "Microsoft" },
+    { innocent: "Rolex", imposter: "Omega" },
+    { innocent: "Gillette", imposter: "Old Spice" }
+  ],
+  "Countries": [
+    { innocent: "Nepal", imposter: "Bhutan" },
+    { innocent: "India", imposter: "Pakistan" },
+    { innocent: "USA", imposter: "Canada" },
+    { innocent: "Japan", imposter: "South Korea" },
+    { innocent: "France", imposter: "Germany" },
+    { innocent: "Australia", imposter: "New Zealand" },
+    { innocent: "Brazil", imposter: "Argentina" },
+    { innocent: "China", imposter: "Taiwan" },
+    { innocent: "Egypt", imposter: "Morocco" },
+    { innocent: "Thailand", imposter: "Vietnam" }
+  ],
+  "Capitals": [
+    { innocent: "Kathmandu", imposter: "Thimphu" },
+    { innocent: "New Delhi", imposter: "Islamabad" },
+    { innocent: "Washington DC", imposter: "Ottawa" },
+    { innocent: "Tokyo", imposter: "Seoul" },
+    { innocent: "Paris", imposter: "Berlin" },
+    { innocent: "London", imposter: "Dublin" },
+    { innocent: "Beijing", imposter: "Shanghai" },
+    { innocent: "Moscow", imposter: "Kyiv" },
+    { innocent: "Cairo", imposter: "Nairobi" },
+    { innocent: "Bangkok", imposter: "Jakarta" }
+  ],
+  "World Cities": [
+    { innocent: "New York", imposter: "Los Angeles" },
+    { innocent: "Dubai", imposter: "Doha" },
+    { innocent: "Singapore", imposter: "Hong Kong" },
+    { innocent: "Sydney", imposter: "Melbourne" },
+    { innocent: "Barcelona", imposter: "Madrid" },
+    { innocent: "Rome", imposter: "Milan" },
+    { innocent: "Istanbul", imposter: "Ankara" },
+    { innocent: "Toronto", imposter: "Vancouver" },
+    { innocent: "Mumbai", imposter: "Delhi" },
+    { innocent: "Las Vegas", imposter: "Miami" }
+  ],
+  "Geography": [
+    { innocent: "Mountain", imposter: "Hill" },
+    { innocent: "River", imposter: "Lake" },
+    { innocent: "Desert", imposter: "Savanna" },
+    { innocent: "Volcano", imposter: "Geyser" },
+    { innocent: "Peninsula", imposter: "Island" },
+    { innocent: "Equator", imposter: "Tropic" },
+    { innocent: "Plateau", imposter: "Valley" },
+    { innocent: "Glacier", imposter: "Iceberg" },
+    { innocent: "Canyon", imposter: "Gorge" },
+    { innocent: "Delta", imposter: "Estuary" }
+  ],
+  "Weather": [
+    { innocent: "Rain", imposter: "Drizzle" },
+    { innocent: "Storm", imposter: "Cyclone" },
+    { innocent: "Fog", imposter: "Mist" },
+    { innocent: "Heatwave", imposter: "Humidity" },
+    { innocent: "Snow", imposter: "Hail" },
+    { innocent: "Thunder", imposter: "Lightning" },
+    { innocent: "Monsoon", imposter: "Pre-Monsoon" },
+    { innocent: "Sunny", imposter: "Cloudy" },
+    { innocent: "Windy", imposter: "Breezy" },
+    { innocent: "Drought", imposter: "Flood" }
+  ],
+  "Space": [
+    { innocent: "Moon", imposter: "Mars" },
+    { innocent: "Sun", imposter: "Star" },
+    { innocent: "Galaxy", imposter: "Nebula" },
+    { innocent: "Astronaut", imposter: "Cosmonaut" },
+    { innocent: "Rocket", imposter: "Satellite" },
+    { innocent: "Black Hole", imposter: "Wormhole" },
+    { innocent: "Telescope", imposter: "Observatory" },
+    { innocent: "Comet", imposter: "Asteroid" },
+    { innocent: "NASA", imposter: "SpaceX" },
+    { innocent: "Orbit", imposter: "Rotation" }
+  ],
+  "Science": [
+    { innocent: "Biology", imposter: "Zoology" },
+    { innocent: "Experiment", imposter: "Observation" },
+    { innocent: "Hypothesis", imposter: "Theory" },
+    { innocent: "Microscope", imposter: "Telescope" },
+    { innocent: "DNA", imposter: "RNA" },
+    { innocent: "Cell", imposter: "Tissue" },
+    { innocent: "Evolution", imposter: "Mutation" },
+    { innocent: "Lab Coat", imposter: "Safety Goggles" },
+    { innocent: "Scientist", imposter: "Researcher" },
+    { innocent: "Vaccine", imposter: "Antibiotic" }
+  ],
+  "Chemistry": [
+    { innocent: "Acid", imposter: "Base" },
+    { innocent: "Oxygen", imposter: "Nitrogen" },
+    { innocent: "Molecule", imposter: "Atom" },
+    { innocent: "Periodic Table", imposter: "Element Chart" },
+    { innocent: "Beaker", imposter: "Flask" },
+    { innocent: "Catalyst", imposter: "Reagent" },
+    { innocent: "Solution", imposter: "Suspension" },
+    { innocent: "Combustion", imposter: "Oxidation" },
+    { innocent: "pH Scale", imposter: "Litmus Test" },
+    { innocent: "Polymer", imposter: "Compound" }
+  ],
+  "Physics": [
+    { innocent: "Gravity", imposter: "Magnetism" },
+    { innocent: "Velocity", imposter: "Acceleration" },
+    { innocent: "Light", imposter: "Sound" },
+    { innocent: "Energy", imposter: "Power" },
+    { innocent: "Friction", imposter: "Tension" },
+    { innocent: "Lens", imposter: "Mirror" },
+    { innocent: "Circuit", imposter: "Battery" },
+    { innocent: "Wave", imposter: "Particle" },
+    { innocent: "Newton", imposter: "Einstein" },
+    { innocent: "Thermodynamics", imposter: "Kinematics" }
+  ],
+  "Mathematics": [
+    { innocent: "Algebra", imposter: "Geometry" },
+    { innocent: "Addition", imposter: "Multiplication" },
+    { innocent: "Fraction", imposter: "Decimal" },
+    { innocent: "Triangle", imposter: "Rectangle" },
+    { innocent: "Pi", imposter: "Euler's Number" },
+    { innocent: "Equation", imposter: "Inequality" },
+    { innocent: "Probability", imposter: "Statistics" },
+    { innocent: "Calculus", imposter: "Trigonometry" },
+    { innocent: "Prime Number", imposter: "Composite Number" },
+    { innocent: "Graph", imposter: "Chart" }
+  ],
+  "Programming": [
+    { innocent: "Python", imposter: "JavaScript" },
+    { innocent: "Frontend", imposter: "Backend" },
+    { innocent: "Bug", imposter: "Error" },
+    { innocent: "Git", imposter: "GitHub" },
+    { innocent: "API", imposter: "SDK" },
+    { innocent: "Database", imposter: "Cache" },
+    { innocent: "React", imposter: "Vue" },
+    { innocent: "Compiler", imposter: "Interpreter" },
+    { innocent: "Loop", imposter: "Recursion" },
+    { innocent: "Deploy", imposter: "Debug" }
+  ],
+  "Internet Slang": [
+    { innocent: "LOL", imposter: "LMAO" },
+    { innocent: "BRB", imposter: "GTG" },
+    { innocent: "FOMO", imposter: "JOMO" },
+    { innocent: "Slay", imposter: "Serve" },
+    { innocent: "Cap", imposter: "No Cap" },
+    { innocent: "Sus", imposter: "Sketchy" },
+    { innocent: "Stan", imposter: "Ship" },
+    { innocent: "Ghosting", imposter: "Breadcrumbing" },
+    { innocent: "Vibe Check", imposter: "Mood" },
+    { innocent: "Based", imposter: "Cringe" }
+  ],
+  "Memes": [
+    { innocent: "Distracted Boyfriend", imposter: "Drake Hotline" },
+    { innocent: "Doge", imposter: "Pepe" },
+    { innocent: "Wojak", imposter: "Chad" },
+    { innocent: "Rickroll", imposter: "Trollface" },
+    { innocent: "This Is Fine", imposter: "Expanding Brain" },
+    { innocent: "NPC", imposter: "Karen" },
+    { innocent: "Ratio", imposter: "Cope" },
+    { innocent: "Touch Grass", imposter: "Go Outside" },
+    { innocent: "Sigma", imposter: "Alpha" },
+    { innocent: "Brainrot", imposter: "Skibidi" }
+  ],
+  "Nepali Memes": [
+    { innocent: "Ma Pani Janchu", imposter: "Ma Pani Garxu" },
+    { innocent: "Khatra", imposter: "Dammi" },
+    { innocent: "Jhole", imposter: "Pole" },
+    { innocent: "Melamchi Paani", imposter: "Tanker Paani" },
+    { innocent: "Load Shedding", imposter: "Internet Band" },
+    { innocent: "Consultancy", imposter: "Agent" },
+    { innocent: "Micro Bus", imposter: "Tempo" },
+    { innocent: "Chiya Pasal", imposter: "Bhatti" },
+    { innocent: "SEE Result", imposter: "NEB Result" },
+    { innocent: "Balen Shah", imposter: "Harka Sampang" }
+  ],
+  "Slang Words": [
+    { innocent: "Cool", imposter: "Lit" },
+    { innocent: "Bro", imposter: "Dude" },
+    { innocent: "Sick", imposter: "Dope" },
+    { innocent: "Flex", imposter: "Show Off" },
+    { innocent: "Lowkey", imposter: "Highkey" },
+    { innocent: "Bet", imposter: "Say Less" },
+    { innocent: "Woke", imposter: "Based" },
+    { innocent: "Extra", imposter: "Dramatic" },
+    { innocent: "Salty", imposter: "Bitter" },
+    { innocent: "GOAT", imposter: "Legend" }
+  ],
+  "Funny Words": [
+    { innocent: "Bamboozle", imposter: "Flabbergast" },
+    { innocent: "Kerfuffle", imposter: "Hubbub" },
+    { innocent: "Wobble", imposter: "Jiggle" },
+    { innocent: "Gobbledygook", imposter: "Mumbo Jumbo" },
+    { innocent: "Snickerdoodle", imposter: "Fiddlesticks" },
+    { innocent: "Brouhaha", imposter: "Ruckus" },
+    { innocent: "Hullabaloo", imposter: "Commotion" },
+    { innocent: "Skedaddle", imposter: "Scram" },
+    { innocent: "Lollygag", imposter: "Dilly Dally" },
+    { innocent: "Cattywampus", imposter: "Askew" }
+  ],
+  "Dark Humor": [
+    { innocent: "Graveyard Shift", imposter: "Night Shift" },
+    { innocent: "Skeleton", imposter: "Skull" },
+    { innocent: "Ghost", imposter: "Zombie" },
+    { innocent: "Coffin", imposter: "Urn" },
+    { innocent: "Vampire", imposter: "Werewolf" },
+    { innocent: "Haunted House", imposter: "Abandoned Building" },
+    { innocent: "Witch", imposter: "Warlock" },
+    { innocent: "Cemetery", imposter: "Mausoleum" },
+    { innocent: "Black Comedy", imposter: "Satire" },
+    { innocent: "Plot Twist", imposter: "Cliffhanger" }
+  ],
+  "Random Objects": [
+    { innocent: "Umbrella", imposter: "Raincoat" },
+    { innocent: "Key", imposter: "Lock" },
+    { innocent: "Rubber Band", imposter: "Paper Clip" },
+    { innocent: "Stapler", imposter: "Hole Punch" },
+    { innocent: "Flashlight", imposter: "Candle" },
+    { innocent: "Rope", imposter: "Chain" },
+    { innocent: "Bucket", imposter: "Barrel" },
+    { innocent: "Sponge", imposter: "Brush" },
+    { innocent: "Tape", imposter: "Glue" },
+    { innocent: "Ball", imposter: "Balloon" }
+  ],
+  "Tools": [
+    { innocent: "Hammer", imposter: "Mallet" },
+    { innocent: "Screwdriver", imposter: "Wrench" },
+    { innocent: "Drill", imposter: "Saw" },
+    { innocent: "Pliers", imposter: "Tongs" },
+    { innocent: "Ladder", imposter: "Scaffold" },
+    { innocent: "Measuring Tape", imposter: "Ruler" },
+    { innocent: "Chisel", imposter: "File" },
+    { innocent: "Axe", imposter: "Hatchet" },
+    { innocent: "Shovel", imposter: "Spade" },
+    { innocent: "Toolbox", imposter: "Workbench" }
+  ],
+  "Weapons (family-safe)": [
+    { innocent: "Sword", imposter: "Dagger" },
+    { innocent: "Bow", imposter: "Crossbow" },
+    { innocent: "Shield", imposter: "Armor" },
+    { innocent: "Spear", imposter: "Javelin" },
+    { innocent: "Slingshot", imposter: "Catapult" },
+    { innocent: "Nunchucks", imposter: "Bo Staff" },
+    { innocent: "Water Gun", imposter: "Foam Dart" },
+    { innocent: "Lightsaber", imposter: "Laser Gun" },
+    { innocent: "Khukuri", imposter: "Machete" },
+    { innocent: "Boomerang", imposter: "Frisbee" }
+  ],
+  "Professions": [
+    { innocent: "Doctor", imposter: "Nurse" },
+    { innocent: "Engineer", imposter: "Architect" },
+    { innocent: "Teacher", imposter: "Professor" },
+    { innocent: "Lawyer", imposter: "Judge" },
+    { innocent: "Chef", imposter: "Baker" },
+    { innocent: "Pilot", imposter: "Flight Attendant" },
+    { innocent: "Journalist", imposter: "Reporter" },
+    { innocent: "Photographer", imposter: "Videographer" },
+    { innocent: "Plumber", imposter: "Electrician" },
+    { innocent: "Farmer", imposter: "Gardener" }
+  ],
+  "Medical": [
+    { innocent: "Hospital", imposter: "Clinic" },
+    { innocent: "Surgery", imposter: "Operation" },
+    { innocent: "X-Ray", imposter: "MRI" },
+    { innocent: "Vaccine", imposter: "Booster" },
+    { innocent: "Bandage", imposter: "Plaster" },
+    { innocent: "Fever", imposter: "Flu" },
+    { innocent: "Prescription", imposter: "Over-the-Counter" },
+    { innocent: "Ambulance", imposter: "Paramedic" },
+    { innocent: "Blood Test", imposter: "Urine Test" },
+    { innocent: "Dentist", imposter: "Orthodontist" }
+  ],
+  "Emergencies": [
+    { innocent: "Fire", imposter: "Explosion" },
+    { innocent: "Earthquake", imposter: "Landslide" },
+    { innocent: "Flood", imposter: "Tsunami" },
+    { innocent: "911", imposter: "100" },
+    { innocent: "First Aid", imposter: "CPR" },
+    { innocent: "Evacuation", imposter: "Shelter" },
+    { innocent: "Power Outage", imposter: "Gas Leak" },
+    { innocent: "Accident", imposter: "Collision" },
+    { innocent: "Emergency Exit", imposter: "Fire Escape" },
+    { innocent: "Siren", imposter: "Alarm" }
+  ],
+  "Politics": [
+    { innocent: "Election", imposter: "Referendum" },
+    { innocent: "Parliament", imposter: "Assembly" },
+    { innocent: "Prime Minister", imposter: "President" },
+    { innocent: "Opposition", imposter: "Coalition" },
+    { innocent: "Campaign", imposter: "Rally" },
+    { innocent: "Vote", imposter: "Ballot" },
+    { innocent: "Corruption", imposter: "Nepotism" },
+    { innocent: "Policy", imposter: "Manifesto" },
+    { innocent: "Protest", imposter: "Strike" },
+    { innocent: "Diplomat", imposter: "Ambassador" }
+  ],
+  "History": [
+    { innocent: "World War I", imposter: "World War II" },
+    { innocent: "Ancient", imposter: "Medieval" },
+    { innocent: "Revolution", imposter: "Independence" },
+    { innocent: "Empire", imposter: "Dynasty" },
+    { innocent: "Colony", imposter: "Protectorate" },
+    { innocent: "Treaty", imposter: "Alliance" },
+    { innocent: "Monarchy", imposter: "Republic" },
+    { innocent: "Archaeology", imposter: "Anthropology" },
+    { innocent: "Civilization", imposter: "Culture" },
+    { innocent: "Timeline", imposter: "Era" }
+  ],
+  "Historical Figures": [
+    { innocent: "Gautam Buddha", imposter: "Mahavira" },
+    { innocent: "Prithvi Narayan Shah", imposter: "Jung Bahadur Rana" },
+    { innocent: "Nelson Mandela", imposter: "Martin Luther King" },
+    { innocent: "Einstein", imposter: "Newton" },
+    { innocent: "Cleopatra", imposter: "Nefertiti" },
+    { innocent: "Napoleon", imposter: "Alexander" },
+    { innocent: "Gandhi", imposter: "Nehru" },
+    { innocent: "Shakespeare", imposter: "Dickens" },
+    { innocent: "Marie Curie", imposter: "Rosalind Franklin" },
+    { innocent: "Genghis Khan", imposter: "Attila" }
+  ],
+  "Retro Games": [
+    { innocent: "Pac-Man", imposter: "Space Invaders" },
+    { innocent: "Tetris", imposter: "Snake" },
+    { innocent: "Mario", imposter: "Sonic" },
+    { innocent: "Contra", imposter: "Duck Hunt" },
+    { innocent: "Street Fighter", imposter: "Mortal Kombat" },
+    { innocent: "Zelda", imposter: "Metroid" },
+    { innocent: "Pinball", imposter: "Arcade" },
+    { innocent: "Game Boy", imposter: "NES" },
+    { innocent: "Chess", imposter: "Checkers" },
+    { innocent: "Ludo", imposter: "Snakes and Ladders" }
+  ],
+  "Board Games": [
+    { innocent: "Monopoly", imposter: "Business" },
+    { innocent: "Scrabble", imposter: "Boggle" },
+    { innocent: "Chess", imposter: "Go" },
+    { innocent: "Uno", imposter: "Cards Against Humanity" },
+    { innocent: "Clue", imposter: "Mystery Date" },
+    { innocent: "Risk", imposter: "Axis & Allies" },
+    { innocent: "Jenga", imposter: "Kerplunk" },
+    { innocent: "Pictionary", imposter: "Charades" },
+    { innocent: "Taboo", imposter: "Catchphrase" },
+    { innocent: "Carrom", imposter: "Pool" }
+  ],
+  "Hobbies": [
+    { innocent: "Painting", imposter: "Drawing" },
+    { innocent: "Gardening", imposter: "Farming" },
+    { innocent: "Photography", imposter: "Videography" },
+    { innocent: "Knitting", imposter: "Crochet" },
+    { innocent: "Fishing", imposter: "Camping" },
+    { innocent: "Reading", imposter: "Writing" },
+    { innocent: "Cooking", imposter: "Baking" },
+    { innocent: "Collecting", imposter: "Trading" },
+    { innocent: "Hiking", imposter: "Trekking" },
+    { innocent: "Origami", imposter: "Crafting" }
+  ],
+  "Travel": [
+    { innocent: "Passport", imposter: "Visa" },
+    { innocent: "Backpacking", imposter: "Luxury Travel" },
+    { innocent: "Hostel", imposter: "Hotel" },
+    { innocent: "Trekking", imposter: "Hiking" },
+    { innocent: "Souvenir", imposter: "Gift" },
+    { innocent: "Itinerary", imposter: "Bucket List" },
+    { innocent: "Layover", imposter: "Transit" },
+    { innocent: "Travel Insurance", imposter: "Travel Guide" },
+    { innocent: "Road Trip", imposter: "Train Journey" },
+    { innocent: "Airport", imposter: "Bus Terminal" }
+  ],
+  "Vacation": [
+    { innocent: "Beach", imposter: "Resort" },
+    { innocent: "Ski Trip", imposter: "Mountain Retreat" },
+    { innocent: "Staycation", imposter: "Day Trip" },
+    { innocent: "Cruise", imposter: "Yacht" },
+    { innocent: "Safari", imposter: "Jungle Trek" },
+    { innocent: "City Tour", imposter: "Heritage Walk" },
+    { innocent: "Summer Break", imposter: "Winter Holiday" },
+    { innocent: "All-Inclusive", imposter: "Self-Catered" },
+    { innocent: "Pokhara Trip", imposter: "Chitwan Trip" },
+    { innocent: "Picnic", imposter: "Camping" }
+  ],
+  "University Life": [
+    { innocent: "Lecture", imposter: "Tutorial" },
+    { innocent: "Dorm", imposter: "Apartment" },
+    { innocent: "Thesis", imposter: "Dissertation" },
+    { innocent: "Dean's List", imposter: "Honor Roll" },
+    { innocent: "Fraternity", imposter: "Sorority" },
+    { innocent: "Campus Job", imposter: "Internship" },
+    { innocent: "Seminar", imposter: "Workshop" },
+    { innocent: "Graduation", imposter: "Convocation" },
+    { innocent: "Research Paper", imposter: "Case Study" },
+    { innocent: "Student Union", imposter: "Clubs" }
+  ],
+  "Subjects": [
+    { innocent: "Math", imposter: "Statistics" },
+    { innocent: "Physics", imposter: "Chemistry" },
+    { innocent: "History", imposter: "Geography" },
+    { innocent: "English", imposter: "Literature" },
+    { innocent: "Economics", imposter: "Commerce" },
+    { innocent: "Biology", imposter: "Botany" },
+    { innocent: "Computer Science", imposter: "IT" },
+    { innocent: "Psychology", imposter: "Sociology" },
+    { innocent: "Nepali", imposter: "Sanskrit" },
+    { innocent: "Art", imposter: "Music" }
+  ],
+  "Cooking": [
+    { innocent: "Fry", imposter: "Grill" },
+    { innocent: "Boil", imposter: "Steam" },
+    { innocent: "Bake", imposter: "Roast" },
+    { innocent: "Chop", imposter: "Dice" },
+    { innocent: "Marinate", imposter: "Season" },
+    { innocent: "Recipe", imposter: "Cookbook" },
+    { innocent: "Spice", imposter: "Herb" },
+    { innocent: "Sauce", imposter: "Gravy" },
+    { innocent: "Stir Fry", imposter: "Deep Fry" },
+    { innocent: "Meal Prep", imposter: "Batch Cooking" }
+  ],
+  "Fitness": [
+    { innocent: "Gym", imposter: "Home Workout" },
+    { innocent: "Cardio", imposter: "Strength Training" },
+    { innocent: "Yoga", imposter: "Pilates" },
+    { innocent: "Protein Shake", imposter: "Pre-Workout" },
+    { innocent: "Squat", imposter: "Lunge" },
+    { innocent: "Push Up", imposter: "Pull Up" },
+    { innocent: "Treadmill", imposter: "Elliptical" },
+    { innocent: "Personal Trainer", imposter: "Fitness Coach" },
+    { innocent: "Calories", imposter: "Macros" },
+    { innocent: "Stretching", imposter: "Warm Up" }
+  ],
+  "Combat Sports": [
+    { innocent: "Boxing", imposter: "Kickboxing" },
+    { innocent: "Judo", imposter: "Karate" },
+    { innocent: "Wrestling", imposter: "MMA" },
+    { innocent: "Taekwondo", imposter: "Kung Fu" },
+    { innocent: "Fencing", imposter: "Kendo" },
+    { innocent: "Muay Thai", imposter: "Savate" },
+    { innocent: "Sumo", imposter: "Wrestling" },
+    { innocent: "Knockout", imposter: "Submission" },
+    { innocent: "Referee", imposter: "Corner Man" },
+    { innocent: "Weight Class", imposter: "Belt Rank" }
+  ],
+  "Nepali Village Life": [
+    { innocent: "Goth", imposter: "Bhatti" },
+    { innocent: "Chautaro", imposter: "Paati" },
+    { innocent: "Krishi", imposter: "Pasu Palan" },
+    { innocent: "Dhime Baja", imposter: "Panche Baja" },
+    { innocent: "Gharbeti", imposter: "Gaunbeti" },
+    { innocent: "Kulo", imposter: "Khanepani" },
+    { innocent: "Chulo", imposter: "Aago" },
+    { innocent: "Gundruk", imposter: "Sinki" },
+    { innocent: "Jyapu", imposter: "Bahun" },
+    { innocent: "Mela", imposter: "Jatra" }
+  ],
+  "Public Transport Life": [
+    { innocent: "Micro Bus", imposter: "City Bus" },
+    { innocent: "Standing Ticket", imposter: "Seat Ticket" },
+    { innocent: "Conductor", imposter: "Driver" },
+    { innocent: "Bus Park", imposter: "Bus Stop" },
+    { innocent: "Rush Hour", imposter: "Off Peak" },
+    { innocent: "Fare Hike", imposter: "Discount Pass" },
+    { innocent: "Overcrowded", imposter: "Empty Seat" },
+    { innocent: "Traffic Police", imposter: "Ticket Checker" },
+    { innocent: "Last Bus", imposter: "First Bus" },
+    { innocent: "Push and Pull", imposter: "Queue" }
+  ],
+  "Breakup Vocabulary": [
+    { innocent: "Ghosting", imposter: "Blocking" },
+    { innocent: "Closure", imposter: "Moving On" },
+    { innocent: "Ex", imposter: "Rebound" },
+    { innocent: "It's Not You", imposter: "We Need Space" },
+    { innocent: "Unfollow", imposter: "Mute" },
+    { innocent: "Heartbreak", imposter: "Betrayal" },
+    { innocent: "Toxic", imposter: "Clingy" },
+    { innocent: "Break", imposter: "Split" },
+    { innocent: "Sorry", imposter: "Goodbye" },
+    { innocent: "Single", imposter: "Complicated" }
+  ],
+  "Student Problems": [
+    { innocent: "Late Submission", imposter: "Missed Deadline" },
+    { innocent: "Back Paper", imposter: "Supplementary" },
+    { innocent: "Proxy Attendance", imposter: "Bunking" },
+    { innocent: "Group Project", imposter: "Solo Assignment" },
+    { innocent: "Tuition Fee", imposter: "Exam Fee" },
+    { innocent: "Notes Photocopy", imposter: "PDF Notes" },
+    { innocent: "Canteen Queue", imposter: "Library Rush" },
+    { innocent: "Internship Hunt", imposter: "Job Hunt" },
+    { innocent: "Exam Anxiety", imposter: "Result Fear" },
+    { innocent: "Scholarship", imposter: "Education Loan" }
+  ],
+  "Rent & Landlord Life": [
+    { innocent: "Rent", imposter: "Deposit" },
+    { innocent: "Landlord", imposter: "Broker" },
+    { innocent: "Lease", imposter: "Agreement" },
+    { innocent: "Roommate", imposter: "Flatmate" },
+    { innocent: "Water Bill", imposter: "Electricity Bill" },
+    { innocent: "Eviction", imposter: "Notice" },
+    { innocent: "Furnished", imposter: "Semi-Furnished" },
+    { innocent: "Maintenance", imposter: "Repair" },
+    { innocent: "Rent Increase", imposter: "Negotiation" },
+    { innocent: "Flat Hunt", imposter: "Room Hunt" }
+  ],
+  "Party & Celebration": [
+    { innocent: "Birthday", imposter: "Anniversary" },
+    { innocent: "Wedding", imposter: "Engagement" },
+    { innocent: "Bachelor Party", imposter: "Bridal Shower" },
+    { innocent: "Toast", imposter: "Speech" },
+    { innocent: "Decoration", imposter: "Catering" },
+    { innocent: "DJ Night", imposter: "Live Music" },
+    { innocent: "House Party", imposter: "Club Night" },
+    { innocent: "Surprise Party", imposter: "Farewell" },
+    { innocent: "Gift Exchange", imposter: "Secret Santa" },
+    { innocent: "Countdown", imposter: "Fireworks" }
+  ],
+  "Gifts": [
+    { innocent: "Watch", imposter: "Bracelet" },
+    { innocent: "Perfume", imposter: "Cologne" },
+    { innocent: "Flowers", imposter: "Chocolates" },
+    { innocent: "Gift Card", imposter: "Voucher" },
+    { innocent: "Handmade", imposter: "Store Bought" },
+    { innocent: "Surprise Box", imposter: "Gift Bag" },
+    { innocent: "Birthday Gift", imposter: "Wedding Gift" },
+    { innocent: "Teddy Bear", imposter: "Action Figure" },
+    { innocent: "Book", imposter: "Journal" },
+    { innocent: "Wallet", imposter: "Belt" }
+  ],
+  "Mythology": [
+    { innocent: "Ram", imposter: "Krishna" },
+    { innocent: "Shiva", imposter: "Vishnu" },
+    { innocent: "Durga", imposter: "Kali" },
+    { innocent: "Hanuman", imposter: "Garuda" },
+    { innocent: "Pandava", imposter: "Kaurava" },
+    { innocent: "Ravana", imposter: "Kumbhakarna" },
+    { innocent: "Zeus", imposter: "Poseidon" },
+    { innocent: "Thor", imposter: "Loki" },
+    { innocent: "Phoenix", imposter: "Griffin" },
+    { innocent: "Yeti", imposter: "Sasquatch" }
+  ],
+  "Horror": [
+    { innocent: "Ghost", imposter: "Poltergeist" },
+    { innocent: "Haunted", imposter: "Cursed" },
+    { innocent: "Exorcism", imposter: "Ritual" },
+    { innocent: "Jump Scare", imposter: "Slow Burn" },
+    { innocent: "Zombie", imposter: "Vampire" },
+    { innocent: "Witch", imposter: "Demon" },
+    { innocent: "Basement", imposter: "Attic" },
+    { innocent: "Ouija Board", imposter: "Tarot Cards" },
+    { innocent: "Slasher", imposter: "Psychological" },
+    { innocent: "Midnight", imposter: "Full Moon" }
+  ],
+  "Crime & Mystery": [
+    { innocent: "Detective", imposter: "Spy" },
+    { innocent: "Murder", imposter: "Kidnapping" },
+    { innocent: "Alibi", imposter: "Motive" },
+    { innocent: "Fingerprint", imposter: "DNA Evidence" },
+    { innocent: "Heist", imposter: "Robbery" },
+    { innocent: "Witness", imposter: "Suspect" },
+    { innocent: "Courtroom", imposter: "Interrogation" },
+    { innocent: "Cold Case", imposter: "Missing Person" },
+    { innocent: "Red Herring", imposter: "Plot Twist" },
+    { innocent: "Sherlock", imposter: "Poirot" }
+  ],
+  "Circus & Entertainment": [
+    { innocent: "Clown", imposter: "Jester" },
+    { innocent: "Acrobat", imposter: "Trapeze Artist" },
+    { innocent: "Magician", imposter: "Illusionist" },
+    { innocent: "Ringmaster", imposter: "Announcer" },
+    { innocent: "Juggler", imposter: "Mime" },
+    { innocent: "Carnival", imposter: "Fair" },
+    { innocent: "Roller Coaster", imposter: "Ferris Wheel" },
+    { innocent: "Ticket Booth", imposter: "Gift Shop" },
+    { innocent: "Lion Tamer", imposter: "Snake Charmer" },
+    { innocent: "Circus Tent", imposter: "Stage Show" }
+  ]
+};
+
+</script>
+<script>
+// ═══════════════════════════════════════════════════════════════
+// EDIT: Paste your exact banner filename below
+// Example: photos/WhatsApp Image 2026-01-15 at 10.30.45.jpeg
+// ═══════════════════════════════════════════════════════════════
+const BANNER_IMAGE = 'photos/WhatsApp Image 2026-01-17 at 5.05.02 PM.jpeg';
+
+const SOUNDS = {
+  click: 'sounds/UwU - SOUND EFFECT.mp3',
+  setup: 'sounds/during_game1.mp3',
+  discussion: [
+    'sounds/game_sound.mp3',
+    'sounds/game_sound_2.mp3',
+    'sounds/game_sound_3.mp3'
+  ]
+};
+
+// ─── Audio Manager ───
+const audio = {
+  click: null, setup: null, discussion: null,
+  discussionIndex: 0,
+  muted: false, initialized: false
+};
+
+function getDiscussionTrack() {
+  return SOUNDS.discussion[audio.discussionIndex] || SOUNDS.discussion[0];
+}
+
+function initAudio() {
+  if (audio.initialized) return;
+  audio.click = new Audio(SOUNDS.click);
+  audio.setup = new Audio(SOUNDS.setup);
+  audio.discussion = new Audio(getDiscussionTrack());
+  [audio.click, audio.setup, audio.discussion].forEach(a => {
+    a.volume = 0.5;
+    a.preload = 'auto';
+  });
+  audio.setup.loop = true;
+  audio.discussion.loop = false;
+  audio.discussion.addEventListener('ended', () => {
+    if (audio.muted) return;
+    audio.discussionIndex = (audio.discussionIndex + 1) % SOUNDS.discussion.length;
+    audio.discussion.src = getDiscussionTrack();
+    audio.discussion.currentTime = 0;
+    audio.discussion.play().catch(() => {});
+  });
+  audio.initialized = true;
+}
+
+function playClick() {
+  initAudio();
+  if (audio.muted) return;
+  audio.click.currentTime = 0;
+  audio.click.play().catch(() => {});
+}
+
+function stopAllLoops() {
+  if (!audio.initialized) return;
+  audio.setup.pause();
+  audio.setup.currentTime = 0;
+  audio.discussion.pause();
+  audio.discussion.currentTime = 0;
+  audio.discussionIndex = 0;
+}
+
+function startBackgroundMusic() {
+  initAudio();
+  if (audio.muted) return;
+  if (audio.discussion.paused) audio.discussion.play().catch(() => {});
+}
+
+function playDiscussionMusic() {
+  startBackgroundMusic();
+}
+
+function toggleMute() {
+  initAudio();
+  audio.muted = !audio.muted;
+  document.getElementById('muteIcon').textContent = audio.muted ? '🔇' : '🔊';
+  if (audio.muted) stopAllLoops();
+  else startBackgroundMusic();
+}
+
+// ─── Game State ───
+let state = {
+  players: 4,
+  imposters: 1,
+  timerMinutes: 5,
+  selectedCategories: [],
+  assignments: [],
+  currentPlayerIndex: 0,
+  currentCategory: '',
+  currentPair: null,
+  countdownInterval: null,
+  timeLeft: 0
+};
+
+// ─── DOM Init ───
+document.getElementById('bannerImg').src = BANNER_IMAGE;
+
+function buildCategoryGrid() {
+  const grid = document.getElementById('categoryGrid');
+  grid.innerHTML = Object.keys(CATEGORIES).map(name => `
+    <div class="category-card">
+      <input type="checkbox" id="cat_${name.replace(/\s+/g,'_')}" value="${name}" class="hidden peer" onchange="validateSetup()">
+      <label for="cat_${name.replace(/\s+/g,'_')}" class="block p-3 rounded-xl border border-slate-600 bg-slate-900/50 text-xs font-medium cursor-pointer btn-press transition-all hover:border-slate-500 text-center leading-tight">${name}</label>
+    </div>
+  `).join('');
+}
+
+function getSelectedCategories() {
+  return [...document.querySelectorAll('#categoryGrid input:checked')].map(cb => cb.value);
+}
+
+function validateSetup() {
+  const players = parseInt(document.getElementById('playerCount').value) || 3;
+  const imposters = parseInt(document.getElementById('imposterCount').value) || 1;
+  const cats = getSelectedCategories();
+  const impWarn = document.getElementById('imposterWarning');
+  const catWarn = document.getElementById('categoryWarning');
+  const startBtn = document.getElementById('startBtn');
+
+  const impValid = imposters >= 1 && imposters < players;
+  const catValid = cats.length > 0;
+  const playerValid = players >= 3;
+
+  impWarn.classList.toggle('hidden', impValid);
+  catWarn.classList.toggle('hidden', catValid);
+  startBtn.disabled = !(impValid && catValid && playerValid);
+  document.getElementById('categoryCount').textContent = cats.length ? `(${cats.length} selected)` : '';
+  return impValid && catValid && playerValid;
+}
+
+function adjustPlayers(d) {
+  const el = document.getElementById('playerCount');
+  el.value = Math.max(3, (parseInt(el.value) || 3) + d);
+  const imp = document.getElementById('imposterCount');
+  if (parseInt(imp.value) >= parseInt(el.value)) imp.value = parseInt(el.value) - 1;
+  validateSetup();
+}
+
+function adjustImposters(d) {
+  const el = document.getElementById('imposterCount');
+  const max = parseInt(document.getElementById('playerCount').value) - 1;
+  el.value = Math.max(1, Math.min(max, (parseInt(el.value) || 1) + d));
+  validateSetup();
+}
+
+function adjustTimer(d) {
+  const el = document.getElementById('timerMinutes');
+  el.value = Math.max(1, Math.min(30, (parseInt(el.value) || 5) + d));
+}
+
+function selectAllCategories() {
+  document.querySelectorAll('#categoryGrid input').forEach(cb => cb.checked = true);
+  validateSetup();
+}
+
+function clearAllCategories() {
+  document.querySelectorAll('#categoryGrid input').forEach(cb => cb.checked = false);
+  validateSetup();
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startGame() {
+  if (!validateSetup()) return;
+  initAudio();
+  startBackgroundMusic();
+
+  state.players = parseInt(document.getElementById('playerCount').value);
+  state.imposters = parseInt(document.getElementById('imposterCount').value);
+  state.timerMinutes = parseInt(document.getElementById('timerMinutes').value);
+  state.selectedCategories = getSelectedCategories();
+  state.currentPlayerIndex = 0;
+
+  const cat = state.selectedCategories[Math.floor(Math.random() * state.selectedCategories.length)];
+  const pool = CATEGORIES[cat];
+  const pair = pool[Math.floor(Math.random() * pool.length)];
+  state.currentCategory = cat;
+  state.currentPair = pair;
+
+  const imposterIndices = new Set();
+  while (imposterIndices.size < state.imposters) {
+    imposterIndices.add(Math.floor(Math.random() * state.players));
+  }
+
+  state.assignments = Array.from({ length: state.players }, (_, i) => ({
+    isImposter: imposterIndices.has(i),
+    word: imposterIndices.has(i) ? pair.imposter : pair.innocent
+  }));
+
+  showRevealScreen();
+}
+
+function showRevealScreen() {
+  const idx = state.currentPlayerIndex;
+  document.getElementById('turnPlayerName').textContent = `Player ${idx + 1}'s Turn`;
+  const assignment = state.assignments[idx];
+  const badge = document.getElementById('roleBadge');
+  const word = document.getElementById('secretWord');
+  const hint = document.getElementById('categoryHint');
+
+  if (assignment.isImposter) {
+    badge.textContent = '🎭 IMPOSTER';
+    badge.className = 'text-sm font-bold uppercase tracking-widest px-4 py-1 rounded-full mb-4 bg-red-900/60 text-red-300';
+    word.textContent = assignment.word;
+    hint.textContent = `Category: ${state.currentCategory} — Blend in!`;
+  } else {
+    badge.textContent = '😇 INNOCENT';
+    badge.className = 'text-sm font-bold uppercase tracking-widest px-4 py-1 rounded-full mb-4 bg-green-900/60 text-green-300';
+    word.textContent = assignment.word;
+    hint.textContent = `Category: ${state.currentCategory}`;
+  }
+
+  document.getElementById('revealContent').classList.remove('visible');
+  document.getElementById('holdPadLabel').style.opacity = '1';
+  showScreen('revealScreen');
+}
+
+// ─── Hold to Reveal ───
+const holdPad = document.getElementById('holdPad');
+const revealContent = document.getElementById('revealContent');
+const holdPadLabel = document.getElementById('holdPadLabel');
+
+function startHold() {
+  holdPad.classList.add('holding');
+  revealContent.classList.add('visible');
+  holdPadLabel.style.opacity = '0';
+}
+
+function endHold() {
+  if (!holdPad.classList.contains('holding')) return;
+  holdPad.classList.remove('holding');
+  revealContent.classList.remove('visible');
+  holdPadLabel.style.opacity = '1';
+  showScreen('nextPlayerScreen');
+  const remaining = state.players - state.currentPlayerIndex - 1;
+  document.getElementById('nextPlayerInfo').textContent = remaining > 0
+    ? `${remaining} player${remaining > 1 ? 's' : ''} remaining`
+    : 'All players have seen their roles!';
+}
+
+holdPad.addEventListener('mousedown', startHold);
+holdPad.addEventListener('mouseup', endHold);
+holdPad.addEventListener('mouseleave', endHold);
+holdPad.addEventListener('touchstart', e => { e.preventDefault(); startHold(); }, { passive: false });
+holdPad.addEventListener('touchend', e => { e.preventDefault(); endHold(); });
+holdPad.addEventListener('touchcancel', endHold);
+
+function nextPlayer() {
+  playClick();
+  state.currentPlayerIndex++;
+  if (state.currentPlayerIndex >= state.players) {
+    startDiscussion();
+  } else {
+    showRevealScreen();
+  }
+}
+
+function startDiscussion() {
+  playDiscussionMusic();
+  state.timeLeft = state.timerMinutes * 60;
+  updateCountdown();
+  state.countdownInterval = setInterval(() => {
+    state.timeLeft--;
+    updateCountdown();
+    if (state.timeLeft <= 0) clearInterval(state.countdownInterval);
+  }, 1000);
+
+  document.getElementById('activeCategoryBadge').textContent = `🎯 Round Category: ${state.currentCategory}`;
+
+  const ref = document.getElementById('categoryReference');
+  ref.innerHTML = state.selectedCategories.map(cat => {
+    const isActive = cat === state.currentCategory;
+    return `
+    <div class="rounded-xl p-3 border ${isActive ? 'bg-cyan-900/30 border-cyan-500/50' : 'bg-slate-900/50 border-slate-700'}">
+      <span class="${isActive ? 'text-cyan-300' : 'text-cyan-400'} font-bold text-sm">${isActive ? '★ ' : ''}${cat}</span>
+      <span class="text-slate-500 text-xs block mt-1">${CATEGORIES[cat].length} word pairs${isActive ? ' · ACTIVE THIS ROUND' : ''}</span>
+    </div>`;
+  }).join('');
+
+  showScreen('gameOnScreen');
+}
+
+function updateCountdown() {
+  const m = Math.floor(state.timeLeft / 60);
+  const s = state.timeLeft % 60;
+  const el = document.getElementById('countdown');
+  el.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  if (state.timeLeft <= 60) el.classList.add('text-red-400');
+  else el.classList.remove('text-red-400');
+}
+
+function endGame() {
+  clearInterval(state.countdownInterval);
+  stopAllLoops();
+  const modal = document.getElementById('endModal');
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+
+function closeEndModal() {
+  const modal = document.getElementById('endModal');
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+  resetGame();
+}
+
+function resetGame() {
+  clearInterval(state.countdownInterval);
+  stopAllLoops();
+  state.currentPlayerIndex = 0;
+  state.assignments = [];
+  document.getElementById('endModal').classList.add('hidden');
+  document.getElementById('endModal').classList.remove('flex');
+  showScreen('setupScreen');
+}
+
+document.addEventListener('click', e => {
+  if (e.target.closest('button') && !e.target.closest('#holdPad') && e.target.id !== 'muteBtn') {
+    initAudio();
+    startBackgroundMusic();
+  }
+}, { once: false });
+
+buildCategoryGrid();
+validateSetup();
+startBackgroundMusic();
+</script>
+</body>
+</html>
