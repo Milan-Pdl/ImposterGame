@@ -31,9 +31,11 @@
   </script>
   <style>
     * { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-    body { overscroll-behavior: none; }
-    .screen { display: none; }
+    html { min-height: 100%; }
+    body { overscroll-behavior: none; min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
+    .screen { display: none; min-height: 100vh; }
     .screen.active { display: flex; }
+    .hold-pad { max-width: 100%; }
     .hold-pad:active, .hold-pad.holding {
       background: linear-gradient(135deg, rgba(34,211,238,0.3), rgba(167,139,250,0.3));
       border-color: #22d3ee;
@@ -51,6 +53,12 @@
     .neon-border { border: 2px solid rgba(34,211,238,0.4); }
     .scrollbar-hide::-webkit-scrollbar { display: none; }
     .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    @media (max-width: 640px) {
+      .category-card label { font-size: 0.95rem; }
+      .hold-pad { aspect-ratio: 1 / 1.05; }
+      .btn-press { min-height: 3rem; }
+      #setupScreen { padding-bottom: 1rem; }
+    }
   </style>
 </head>
 <body class="bg-slate-900 text-white min-h-screen overflow-x-hidden">
@@ -129,7 +137,7 @@
             <button onclick="clearAllCategories()" class="text-xs px-3 py-1.5 rounded-lg bg-slate-700 text-slate-300 btn-press">Clear All</button>
           </div>
         </div>
-        <div id="categoryGrid" class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto scrollbar-hide"></div>
+        <div id="categoryGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto scrollbar-hide"></div>
         <p id="categoryWarning" class="text-red-400 text-xs mt-2 hidden">Select at least one category</p>
       </div>
 
@@ -148,7 +156,7 @@
       <p class="text-slate-500 mt-2 text-sm">Only this player should look at the screen</p>
     </div>
 
-    <div id="holdPad" class="hold-pad w-full max-w-sm aspect-square rounded-3xl neon-border bg-slate-800/80 flex flex-col items-center justify-center cursor-pointer select-none animate-pulse-glow relative overflow-hidden">
+    <div id="holdPad" class="hold-pad w-full max-w-[420px] aspect-square rounded-3xl neon-border bg-slate-800/80 flex flex-col items-center justify-center cursor-pointer select-none animate-pulse-glow relative overflow-hidden mx-auto">
       <div id="holdPadLabel" class="text-center pointer-events-none">
         <span class="text-5xl mb-4 block">👆</span>
         <span class="text-xl font-black tracking-wider text-cyan-300">HOLD TO REVEAL</span>
@@ -178,8 +186,8 @@
   </div>
 
   <!-- END GAME MODAL -->
-  <div id="endModal" class="fixed inset-0 z-40 hidden items-center justify-center bg-black/70 backdrop-blur-sm px-6">
-    <div class="bg-slate-800 rounded-3xl p-6 max-w-sm w-full neon-border animate-scale-in text-center">
+  <div id="endModal" class="fixed inset-0 z-40 hidden items-center justify-center bg-black/70 backdrop-blur-sm px-4 py-6">
+    <div class="bg-slate-800 rounded-3xl p-6 w-full max-w-md neon-border animate-scale-in text-center">
       <span class="text-5xl block mb-4">🗳️</span>
       <h3 class="text-xl font-black text-cyan-400 mb-2">Time to Vote!</h3>
       <p class="text-slate-400 text-sm mb-6">Discuss, accuse, and vote out the imposters. Innocents win if all imposters are caught!</p>
@@ -205,7 +213,7 @@
       <div id="categoryReference" class="flex-1 overflow-y-auto scrollbar-hide space-y-2"></div>
     </div>
 
-    <div class="flex gap-3">
+    <div class="flex flex-col sm:flex-row gap-3">
       <button onclick="endGame()" class="flex-1 h-14 rounded-xl bg-red-900/60 border border-red-700 text-red-300 font-bold btn-press">End Game</button>
       <button onclick="resetGame()" class="flex-1 h-14 rounded-xl bg-slate-700 border border-slate-600 font-bold btn-press">Reset</button>
     </div>
