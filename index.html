@@ -165,7 +165,7 @@
         <span id="roleBadge" class="text-sm font-bold uppercase tracking-widest px-4 py-1 rounded-full mb-4"></span>
         <p id="roleLabel" class="text-slate-400 text-sm mb-2">Your Secret Word</p>
         <h3 id="secretWord" class="text-3xl sm:text-4xl font-black text-center"></h3>
-        <p id="categoryHint" class="text-slate-500 text-sm mt-4 text-center"></p>
+        <p id="categoryHint" class="text-slate-400 text-sm mt-4 text-center uppercase tracking-[0.15em]"></p>
       </div>
     </div>
 
@@ -1740,17 +1740,22 @@ function showRevealScreen() {
     badge.textContent = '🎭 IMPOSTER';
     badge.className = 'text-sm font-bold uppercase tracking-widest px-4 py-1 rounded-full mb-4 bg-red-900/60 text-red-300';
     word.textContent = assignment.word;
-    hint.textContent = `Category: ${state.currentCategory} — Blend in!`;
+    hint.textContent = getOneWordHint(state.currentCategory);
   } else {
     badge.textContent = '😇 INNOCENT';
     badge.className = 'text-sm font-bold uppercase tracking-widest px-4 py-1 rounded-full mb-4 bg-green-900/60 text-green-300';
     word.textContent = assignment.word;
-    hint.textContent = `Category: ${state.currentCategory}`;
+    hint.textContent = getOneWordHint(state.currentCategory);
   }
 
   document.getElementById('revealContent').classList.remove('visible');
   document.getElementById('holdPadLabel').style.opacity = '1';
   showScreen('revealScreen');
+}
+
+function getOneWordHint(category) {
+  if (!category) return '';
+  return category.trim().split(/\s+|\//).filter(Boolean).pop() || category;
 }
 
 // ─── Hold to Reveal ───
