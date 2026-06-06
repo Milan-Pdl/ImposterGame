@@ -36,11 +36,6 @@
     .screen { display: none; min-height: 100vh; }
     .screen.active { display: flex; }
     .hold-pad { max-width: 100%; }
-    .hold-pad:active, .hold-pad.holding {
-      background: linear-gradient(135deg, rgba(34,211,238,0.3), rgba(167,139,250,0.3));
-      border-color: #22d3ee;
-      transform: scale(0.98);
-    }
     .reveal-content { filter: blur(20px); opacity: 0.3; transition: filter 0.15s, opacity 0.15s; }
     .reveal-content.visible { filter: blur(0); opacity: 1; }
     .category-card input:checked + label {
@@ -53,11 +48,23 @@
     .neon-border { border: 2px solid rgba(34,211,238,0.4); }
     .scrollbar-hide::-webkit-scrollbar { display: none; }
     .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    .setup-control { min-width: 0; }
+    .setup-label { font-size: 0.9rem; }
+    .setup-input-box { flex: 1 1 auto; min-width: 0; }
+    .setup-spinner { width: 56px; min-width: 56px; }
     @media (max-width: 640px) {
-      .category-card label { font-size: 0.95rem; }
+      body { padding-left: 0.5rem; padding-right: 0.5rem; }
+      .screen { padding-left: 0; padding-right: 0; }
+      .setup-control { width: 100%; }
+      .setup-grid { grid-template-columns: 1fr; }
+      .setup-row { flex-direction: column; align-items: stretch; }
+      .setup-row > * { width: 100%; }
+      .setup-row button { width: 100%; }
+      #setupScreen { padding-bottom: 1.5rem; }
       .hold-pad { aspect-ratio: 1 / 1.05; }
       .btn-press { min-height: 3rem; }
-      #setupScreen { padding-bottom: 1rem; }
+      .category-card label { font-size: 0.95rem; }
+      #gameOnScreen .flex { flex-direction: column; }
     }
   </style>
 </head>
@@ -93,46 +100,46 @@
       <h2 class="text-center text-lg font-bold text-cyan-400 tracking-wider">GAME SETUP</h2>
 
       <!-- Players -->
-      <div class="bg-slate-800/60 rounded-2xl p-4 neon-border">
-        <label class="text-sm text-slate-400 font-medium">Number of Players</label>
-        <div class="flex items-center gap-3 mt-2">
-          <button onclick="adjustPlayers(-1)" class="w-14 h-14 rounded-xl bg-slate-700 text-2xl font-bold btn-press hover:bg-slate-600">−</button>
+      <div class="bg-slate-800/60 rounded-2xl p-4 neon-border setup-control">
+        <label class="text-sm text-slate-400 font-medium setup-label">Number of Players</label>
+        <div class="flex items-center gap-3 mt-2 setup-row">
+          <button onclick="adjustPlayers(-1)" class="setup-spinner h-14 rounded-xl bg-slate-700 text-2xl font-bold btn-press hover:bg-slate-600">−</button>
           <input id="playerCount" type="number" min="3" value="4"
-            class="flex-1 h-14 text-center text-2xl font-bold bg-slate-900 rounded-xl border border-slate-600 focus:border-cyan-400 focus:outline-none"
+            class="setup-input-box h-14 text-center text-2xl font-bold bg-slate-900 rounded-xl border border-slate-600 focus:border-cyan-400 focus:outline-none"
             onchange="validateSetup()" oninput="validateSetup()">
-          <button onclick="adjustPlayers(1)" class="w-14 h-14 rounded-xl bg-slate-700 text-2xl font-bold btn-press hover:bg-slate-600">+</button>
+          <button onclick="adjustPlayers(1)" class="setup-spinner h-14 rounded-xl bg-slate-700 text-2xl font-bold btn-press hover:bg-slate-600">+</button>
         </div>
       </div>
 
       <!-- Imposters -->
-      <div class="bg-slate-800/60 rounded-2xl p-4 neon-border">
-        <label class="text-sm text-slate-400 font-medium">Number of Imposters</label>
-        <div class="flex items-center gap-3 mt-2">
-          <button onclick="adjustImposters(-1)" class="w-14 h-14 rounded-xl bg-red-900/50 text-2xl font-bold btn-press hover:bg-red-800/50">−</button>
+      <div class="bg-slate-800/60 rounded-2xl p-4 neon-border setup-control">
+        <label class="text-sm text-slate-400 font-medium setup-label">Number of Imposters</label>
+        <div class="flex items-center gap-3 mt-2 setup-row">
+          <button onclick="adjustImposters(-1)" class="setup-spinner h-14 rounded-xl bg-red-900/50 text-2xl font-bold btn-press hover:bg-red-800/50">−</button>
           <input id="imposterCount" type="number" min="1" value="1"
-            class="flex-1 h-14 text-center text-2xl font-bold bg-slate-900 rounded-xl border border-red-800/50 focus:border-red-400 focus:outline-none"
+            class="setup-input-box h-14 text-center text-2xl font-bold bg-slate-900 rounded-xl border border-red-800/50 focus:border-red-400 focus:outline-none"
             onchange="validateSetup()" oninput="validateSetup()">
-          <button onclick="adjustImposters(1)" class="w-14 h-14 rounded-xl bg-red-900/50 text-2xl font-bold btn-press hover:bg-red-800/50">+</button>
+          <button onclick="adjustImposters(1)" class="setup-spinner h-14 rounded-xl bg-red-900/50 text-2xl font-bold btn-press hover:bg-red-800/50">+</button>
         </div>
         <p id="imposterWarning" class="text-red-400 text-xs mt-2 hidden">Imposters must be less than total players</p>
       </div>
 
       <!-- Timer -->
-      <div class="bg-slate-800/60 rounded-2xl p-4 neon-border">
-        <label class="text-sm text-slate-400 font-medium">Discussion Timer (minutes)</label>
-        <div class="flex items-center gap-3 mt-2">
-          <button onclick="adjustTimer(-1)" class="w-14 h-14 rounded-xl bg-slate-700 text-2xl font-bold btn-press">−</button>
+      <div class="bg-slate-800/60 rounded-2xl p-4 neon-border setup-control">
+        <label class="text-sm text-slate-400 font-medium setup-label">Discussion Timer (minutes)</label>
+        <div class="flex items-center gap-3 mt-2 setup-row">
+          <button onclick="adjustTimer(-1)" class="setup-spinner h-14 rounded-xl bg-slate-700 text-2xl font-bold btn-press">−</button>
           <input id="timerMinutes" type="number" min="1" max="30" value="5"
-            class="flex-1 h-14 text-center text-2xl font-bold bg-slate-900 rounded-xl border border-slate-600 focus:border-cyan-400 focus:outline-none">
-          <button onclick="adjustTimer(1)" class="w-14 h-14 rounded-xl bg-slate-700 text-2xl font-bold btn-press">+</button>
+            class="setup-input-box h-14 text-center text-2xl font-bold bg-slate-900 rounded-xl border border-slate-600 focus:border-cyan-400 focus:outline-none">
+          <button onclick="adjustTimer(1)" class="setup-spinner h-14 rounded-xl bg-slate-700 text-2xl font-bold btn-press">+</button>
         </div>
       </div>
 
       <!-- Categories -->
       <div class="bg-slate-800/60 rounded-2xl p-4 neon-border">
-        <div class="flex items-center justify-between mb-3">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 gap-3">
           <label class="text-sm text-slate-400 font-medium">Categories <span id="categoryCount" class="text-cyan-400"></span></label>
-          <div class="flex gap-2">
+          <div class="flex flex-wrap gap-2 justify-end w-full sm:w-auto">
             <button onclick="selectAllCategories()" class="text-xs px-3 py-1.5 rounded-lg bg-cyan-900/50 text-cyan-300 btn-press">Select All</button>
             <button onclick="clearAllCategories()" class="text-xs px-3 py-1.5 rounded-lg bg-slate-700 text-slate-300 btn-press">Clear All</button>
           </div>
@@ -163,7 +170,7 @@
       </div>
       <div id="revealContent" class="reveal-content absolute inset-0 flex flex-col items-center justify-center p-6 pointer-events-none">
         <span id="roleBadge" class="text-sm font-bold uppercase tracking-widest px-4 py-1 rounded-full mb-4"></span>
-        <p id="roleLabel" class="text-slate-400 text-sm mb-2">Your Secret Word</p>
+        <p id="roleLabel" class="text-slate-400 text-sm mb-2">Hint</p>
         <h3 id="secretWord" class="text-3xl sm:text-4xl font-black text-center"></h3>
         <p id="categoryHint" class="text-slate-400 text-sm mt-4 text-center uppercase tracking-[0.15em]"></p>
       </div>
@@ -1740,12 +1747,12 @@ function showRevealScreen() {
     badge.textContent = '🎭 IMPOSTER';
     badge.className = 'text-sm font-bold uppercase tracking-widest px-4 py-1 rounded-full mb-4 bg-red-900/60 text-red-300';
     word.textContent = assignment.word;
-    hint.textContent = getOneWordHint(state.currentCategory);
+    hint.textContent = getWordHint(assignment.word, state.currentCategory);
   } else {
     badge.textContent = '😇 INNOCENT';
     badge.className = 'text-sm font-bold uppercase tracking-widest px-4 py-1 rounded-full mb-4 bg-green-900/60 text-green-300';
     word.textContent = assignment.word;
-    hint.textContent = getOneWordHint(state.currentCategory);
+    hint.textContent = getWordHint(assignment.word, state.currentCategory);
   }
 
   document.getElementById('revealContent').classList.remove('visible');
@@ -1753,9 +1760,42 @@ function showRevealScreen() {
   showScreen('revealScreen');
 }
 
-function getOneWordHint(category) {
-  if (!category) return '';
-  return category.trim().split(/\s+|\//).filter(Boolean).pop() || category;
+function getWordHint(secretWord, category) {
+  if (!secretWord) return '';
+  const text = secretWord.toLowerCase();
+  const cat = (category || '').toLowerCase();
+
+  const hintGroups = [
+    { pattern: ['celebrity', 'celeb', 'famous', 'actor', 'actress', 'singer', 'movie', 'film', 'tv', 'show', 'star'], hint: 'celebrity' },
+    { pattern: ['food', 'drink', 'dessert', 'pizza', 'burger', 'momo', 'chai', 'coffee', 'tea', 'taco', 'cake', 'snack', 'meal', 'dish', 'noodle', 'curry'], hint: 'food' },
+    { pattern: ['city', 'country', 'place', 'lake', 'river', 'camp', 'park', 'market', 'street', 'road', 'tower', 'hill', 'mountain', 'beach', 'temple', 'train', 'airport'], hint: 'location' },
+    { pattern: ['animal', 'bird', 'fish', 'dog', 'cat', 'lion', 'tiger', 'rhino', 'elephant', 'monkey', 'snake', 'horse', 'panda', 'crow', 'eagle', 'shark'], hint: 'animal' },
+    { pattern: ['car', 'bus', 'train', 'plane', 'truck', 'bike', 'ship', 'boat', 'scooter', 'taxi', 'rickshaw', 'jeep', 'vehicle', 'flight'], hint: 'vehicle' },
+    { pattern: ['sport', 'match', 'ball', 'cricket', 'football', 'basketball', 'tennis', 'stadium', 'coach', 'team', 'goal'], hint: 'sports' },
+    { pattern: ['school', 'college', 'exam', 'study', 'teacher', 'student', 'campus', 'hostel', 'degree', 'class'], hint: 'education' },
+    { pattern: ['job', 'office', 'career', 'work', 'salary', 'boss', 'manager', 'interview', 'resume'], hint: 'work' },
+    { pattern: ['tech', 'computer', 'phone', 'laptop', 'internet', 'app', 'game', 'social', 'media', 'programming', 'coding', 'wifi'], hint: 'technology' },
+    { pattern: ['music', 'song', 'band', 'album', 'artist', 'guitar', 'piano', 'dj'], hint: 'music' },
+    { pattern: ['flower', 'tree', 'plant', 'garden', 'rose', 'cactus', 'bamboo', 'orchid'], hint: 'plant' },
+    { pattern: ['family', 'father', 'mother', 'son', 'daughter', 'sibling', 'wife', 'husband'], hint: 'family' },
+    { pattern: ['weapon', 'sword', 'bow', 'shield', 'laser', 'gun'], hint: 'weapon' }
+  ];
+
+  for (const group of hintGroups) {
+    if (group.pattern.some(p => text.includes(p) || cat.includes(p))) {
+      return group.hint;
+    }
+  }
+
+    if (/^[a-z]{1,4}$/.test(text) && text.split(' ').length === 1) {
+    return 'short word';
+  }
+
+  if (text.split(' ').length > 1) {
+    return 'phrase';
+  }
+
+  return 'single word';
 }
 
 // ─── Hold to Reveal ───
@@ -1878,3 +1918,4 @@ startBackgroundMusic();
 </script>
 </body>
 </html>
+
