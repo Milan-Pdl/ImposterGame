@@ -1747,13 +1747,20 @@ function showRevealScreen() {
     badge.textContent = '🎭 IMPOSTER';
     badge.className = 'text-sm font-bold uppercase tracking-widest px-4 py-1 rounded-full mb-4 bg-red-900/60 text-red-300';
     word.textContent = assignment.word;
-    hint.textContent = getWordHint(assignment.word, state.currentCategory);
+    // Imposters should not be shown the category/hint
+    hint.textContent = '';
+    document.getElementById('categoryHint').style.display = 'none';
   } else {
     badge.textContent = '😇 INNOCENT';
     badge.className = 'text-sm font-bold uppercase tracking-widest px-4 py-1 rounded-full mb-4 bg-green-900/60 text-green-300';
     word.textContent = assignment.word;
-    hint.textContent = getWordHint(assignment.word, state.currentCategory);
+    // For innocent players, show the word only (no small 'Hint' label or category text)
+    hint.textContent = '';
+    document.getElementById('categoryHint').style.display = 'none';
   }
+  // hide the small hint label element entirely since we display the word only
+  const roleLabelEl = document.getElementById('roleLabel');
+  if (roleLabelEl) roleLabelEl.style.display = 'none';
 
   document.getElementById('revealContent').classList.remove('visible');
   document.getElementById('holdPadLabel').style.opacity = '1';
